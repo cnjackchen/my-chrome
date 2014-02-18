@@ -1,3 +1,5 @@
-2.7.4
-https://googledrive.com/host/0B21uwFpGQgjNWWgzV0dJVUI3YUU/MyChrome_v2.7.4.zip
-修正 Windows 8 环境下“没有注册类”错误。
+2.8
+https://googledrive.com/host/0B21uwFpGQgjNWWgzV0dJVUI3YUU/MyChrome_v2.8.zip
+（1)解决更新过程中提取浏览器程序文件失败的问题。
+（2）增加启动浏览器时启动外部程序的功能。
+（3)其它小的改进。
