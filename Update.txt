@@ -1,0 +1,3 @@
+2.7.4
+https://googledrive.com/host/0B21uwFpGQgjNWWgzV0dJVUI3YUU/MyChrome_v2.7.4.zip
+修正 Windows 8 环境下“没有注册类”错误。
