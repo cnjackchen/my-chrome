@@ -1,9 +1,9 @@
- #NoTrayIcon
+#NoTrayIcon
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=Icon_1.ico
 #AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=2.8.1.0
+#AutoIt3Wrapper_Res_Fileversion=2.8.2.0
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_Au3Check_Stop_OnWarning=y
@@ -37,7 +37,7 @@ Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "2.8.1" ; MyChrome version
+Global Const $AppVersion = "2.8.2" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
 Global $LastCheckUpdate, $CheckingInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome
@@ -179,7 +179,7 @@ EndIf
 CreateSettingsShortcut(@ScriptDir & "\" & $AppName & "设置.vbs")
 
 ;~ Check mychrome update
-If $AutoUpdateApp <> 0 And _DateDiff("D", $LastCheckAppUpdate, _NowCalcDate()) >= 7 Then
+If $AutoUpdateApp <> 0 And _DateDiff("D", $LastCheckAppUpdate, _NowCalcDate()) >= 1 Then
 	CheckAppUpdate()
 EndIf
 
@@ -667,7 +667,7 @@ Func GetExtAppPath()
 	If $path = "" Then Return
 	$ExtAppPath = RelativePath($path) ; 绝对路径转成相对路径（如果可以）
 	GUICtrlSetData($hExtAppPath, $ExtAppPath)
-EndFunc   ;==>GetChromePath
+EndFunc   ;==>GetExtAppPath
 
 
 ; 指定用户数据文件夹
@@ -1156,7 +1156,7 @@ Func UpdateChrome($ChromePath, $Channel)
 		Return
 	EndIf
 
-	$msg = 6
+	$msg = 3
 	Local $info = "Google Chrome (" & $Channel & ") 可以更新，是否立即下载浏览器的最新版本？" & @CRLF & @CRLF _
 			 & "最新版本：" & $LatestChromeVer & @CRLF _
 			 & "您的版本：" & $ChromeFileVersion & "  " & $ChromeLastChange
