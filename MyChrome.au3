@@ -1,9 +1,9 @@
-﻿#NoTrayIcon
+ #NoTrayIcon
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=Icon_1.ico
 #AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=2.8.0.0
+#AutoIt3Wrapper_Res_Fileversion=2.8.1.0
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_Au3Check_Stop_OnWarning=y
@@ -37,9 +37,9 @@ Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "2.8" ; MyChrome version
+Global Const $AppVersion = "2.8.1" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
-Global $CacheDir, $CacheSize
+Global $CacheDir, $CacheSize, $PortableParam
 Global $LastCheckUpdate, $CheckingInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome
 Global $EnableProxy, $ProxySever, $ProxyPort
 Global $AutoUpdateApp, $LastCheckAppUpdate
@@ -155,7 +155,7 @@ For $i = 1 To $cmdline[0]
 	EndIf
 Next
 
-Global $PortableParam = '--user-data-dir="' & $UserDataDir & '"'
+$PortableParam &= ' --user-data-dir="' & $UserDataDir & '"'
 If $CacheDir <> "*" Then
 	$CacheDir = AbsolutePath($CacheDir)
 	$PortableParam &= ' --disk-cache-dir="' & $CacheDir & '"'
@@ -169,9 +169,7 @@ Run('"' & $ChromePath & '" ' & $PortableParam & ' ' & $Params, $ChromeDir)
 
 ; Start the external app
 If FileExists($ExtAppPath) Then
-	$dir = ""
-	$file = ""
-	SplitPath($ExtAppPath, $dir, $file)
+	$file = StringRegExpReplace($ExtAppPath, '.*\\', '')
 	If Not ProcessExists($file) Then
 		Run('"' & $ExtAppPath & '" ' & $ExtAppParam)
 	EndIf
@@ -237,42 +235,23 @@ EndFunc
 ;~ MyChrome 只是在 google chrome 浏览器将自己设为默认的基础上作必要的修改。
 ;~ 力求注册表项与原版一致，只修改值而不在注册表内留下没用的垃圾
 Func CheckDefaultBrowser($ChromePath)
-	Local $Progid, $path, $i, $InternetClient, $var, $param, $prefs, $path
-
-	; 修改Preferences，禁止Chrome原版启动时检查默认浏览器
-	; 也可加启动参数 --no-default-browser-check
-	$prefs = FileRead($UserDataDir & '\Default\Preferences')
-	If Not $prefs Then
-		FileWrite($UserDataDir & '\Default\Preferences', '{' & @CRLF & '"browser": {' & @CRLF & '"check_default_browser": false' & @CRLF & '}' & @CRLF & '}')
-	ElseIf Not StringInStr($prefs, '"check_default_browser": false') Then
-		; 若浏览器正在运行，Preferences 会被覆盖，无法禁止 google chrome 原版启动时检查默认浏览器
-		$path = UserDataInUse($UserDataDir)
-		If $path Then WaitChromeClose($path, "请关闭 Google Chrome 以便完成默认浏览器设置！")
-
-		If StringInStr($prefs, '"check_default_browser": true') Then
-			$prefs = StringReplace($prefs, '"check_default_browser": true', '"check_default_browser": false')
-		ElseIf StringInStr($prefs, '"browser": {') Then
-			$prefs = StringReplace($prefs, '"browser": {', '"browser": {' & @CRLF & '"check_default_browser": false,')
-		Else
-			$prefs = StringReplace($prefs, '{', '{' & @CRLF & '"browser": {' & @CRLF & '"check_default_browser": false,')
-		EndIf
-		FileDelete($UserDataDir & '\Default\Preferences')
-		FileWrite($UserDataDir & '\Default\Preferences', $prefs)
-	EndIf
+	Local $Progid, $command, $i, $InternetClient, $var, $param, $prefs
 
 	If @OSVersion = "WIN_XP" Then
-		$path = RegRead('HKCR\http\shell\open\command', '')
-		If Not StringInStr($path, $ChromePath) Then
-			Return ; 待引导的Chrome未被设为默认则返回
-		EndIf
 		$Progid = RegRead('HKCR\.htm', '') ; ChromeHTML
+		$command = RegRead('HKCR\http\shell\open\command', '')
 	Else ; Win7/Win8
 		$Progid = RegRead('HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice', 'Progid')
-		$path = RegRead('HKCR\' & $Progid & '\shell\open\command', '')
-		If Not StringInStr($path, $ChromePath) Then
-			Return
-		EndIf
+		$command = RegRead('HKCR\' & $Progid & '\shell\open\command', '')
 	EndIf
+	If StringInStr($command, @ScriptFullPath) Then ; if mychrome is the default
+		$PortableParam = '--no-default-browser-check'
+		Return
+	EndIf
+	If Not StringInStr($command, $ChromePath) Then ; if chrome is not the default
+		Return
+	EndIf
+	$PortableParam = '--no-default-browser-check'
 
 	$i = 1
 	While 1
@@ -364,10 +343,10 @@ Func CheckAppUpdate()
 		$update = $match[2]
 		If $AppVersion = $LatestAppVer Or $IgnoreAppVer = $LatestAppVer Then Return
 		If $AutoUpdateApp = 1 Then
-			$msg = MsgBoxE(67, 'MyChrome 更新', "MyChrome " & $LatestAppVer & " 已发布，更新内容：" & _
-				@CRLF & @CRLF & $update & @CRLF & @CRLF & "是否自动更新？", 0, '', '', '', '不再提示')
-			If $msg <> 6 Then
-				If $msg = 2 Then IniWrite($inifile, "Settings", "IgnoreAppVer", $LatestAppVer) ; 下次不再显示
+			$msg = MsgBoxE(66, 'MyChrome 更新', "MyChrome " & $LatestAppVer & " 已发布，更新内容：" & _
+				@CRLF & @CRLF & $update & @CRLF & @CRLF & "是否自动更新？", 0, '', '是', '否', '不再提示')
+			If $msg = 4 or $msg = 5 Then ; 4-否 or 5-IGNORE
+				If $msg = 5 Then IniWrite($inifile, "Settings", "IgnoreAppVer", $LatestAppVer)
 				Return
 			EndIf
 		EndIf
@@ -401,11 +380,14 @@ Func CheckAppUpdate()
 			FileMove($temp & "\*.*", @ScriptDir & "\", 9)
 			MsgBox(64, "MyChrome 更新", "MyChrome 已更新至 " & $LatestAppVer & " ！" & @CRLF & "原来的 MyChrome 已备份为 " & @ScriptName & ".bak。")
 		Else
-			MsgBox(64, "MyChrome 更新", "MyChrome " & $LatestAppVer & " 自动更新失败！")
+			$msg = MsgBox(20, "MyChrome 更新", "MyChrome 自动更新失败！" & @CRLF & @CRLF & "是否去软件发布页手动下载更新？")
+			If $msg = 6 Then ; Yes
+				Run('"' & $ChromePath & '" ' & $PortableParam & ' http://hi.baidu.com/jdchenjian/item/e04f06df3975724eddf9bedc', $ChromeDir)
+			EndIf
 		EndIf
 		DirRemove($temp, 1)
 		TraySetState(2)
-	Else ; hi.baidu.com/jdchenjian/blog/item/23114bf153aba5c47831aa60.html
+	Else ; hi.baidu.com/jdchenjian/item/e04f06df3975724eddf9bedc
 		Local $hHTTPOpen, $hConnect, $hRequest
 		$hHTTPOpen = _WinHttpOpen(Default, $WINHTTP_ACCESS_TYPE_NO_PROXY) ; connect directly
 		$hConnect = _WinHttpConnect($hHTTPOpen, "hi.baidu.com", 80)
@@ -420,12 +402,11 @@ Func CheckAppUpdate()
 		$LatestAppVer = $match[0]
 		If $AppVersion = $LatestAppVer Or $IgnoreAppVer = $LatestAppVer Then Return
 
-		$msg = MsgBoxE(67, 'MyChrome 更新', "MyChrome " & $LatestAppVer & " 已发布，是否去软件发布页看看？", 0, '', '', '', '忽略')
-		If $msg <> 7 Then ; other than No
+		$msg = MsgBoxE(66, 'MyChrome 更新', "MyChrome " & $LatestAppVer & " 已发布，是否去软件发布页看看？", 0, '', '是', '否', '不再提示')
+		If $msg = 3 Then ; 3-是
+			Run('"' & $ChromePath & '" ' & $PortableParam & ' http://hi.baidu.com/jdchenjian/item/e04f06df3975724eddf9bedc', $ChromeDir)
+		ElseIf $msg = 5 Then
 			IniWrite($inifile, "Settings", "IgnoreAppVer", $LatestAppVer) ; ignore this version
-			If $msg = 6 Then
-				Run('"' & $ChromePath & '" ' & $PortableParam & ' http://hi.baidu.com/jdchenjian/item/e04f06df3975724eddf9bedc', $ChromeDir)
-			EndIf
 		EndIf
 	EndIf
 EndFunc   ;==>CheckAppUpdate
@@ -665,6 +646,9 @@ Func GetChromePath()
 		$sChromePath = FileSelectFolder("选择 Chrome 浏览器程序文件夹", "", 1 + 4, @ScriptDir & "\Chrome", $hSettingsGUI)
 		If $sChromePath = "" Then Return
 		$sChromePath = StringRegExpReplace($sChromePath, "\\$", "") & "\chrome.exe"
+	EndIf
+	If FileExists($sChromePath) Then
+		_GUICtrlComboBox_SelectString($hChromeSource, "----  请选择  ----")
 	EndIf
 	FileChangeDir(@ScriptDir) ; FileOpenDialog 会改变 @workingdir，将它改回来
 	Local $chromedll = StringRegExpReplace($sChromePath, "[^\\]+$", "chrome.dll")
@@ -1178,14 +1162,14 @@ Func UpdateChrome($ChromePath, $Channel)
 			 & "您的版本：" & $ChromeFileVersion & "  " & $ChromeLastChange
 
 	If Not IsHWnd($hSettingsGUI) And $AskBeforeUpdateChrome = 1 Then
-		$msg = MsgBoxE(67, 'MyChrome', $info, 0, '', '', '', '修改设置')
+		$msg = MsgBoxE(66, 'MyChrome', $info, 0, '', '是', '否', '修改设置')
 	EndIf
 
 	Local $restart = 1, $error, $errormsg, $updated
-	If $msg = 2 Then ; Cancel - 修改设置
+	If $msg = 5 Then ; 修改设置
 		ShowSettings() ; 重启程序，显示设置窗口
 		Exit
-	ElseIf $msg = 6 Then ; YES
+	ElseIf $msg = 3 Then ; 是
 		$IsUpdating = $LatestChromeUrl
 		Local $localfile = $ChromeDir & "\~Update\chrome_installer.exe"
 		If IsHWnd($hSettingsGUI) Then
