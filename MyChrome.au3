@@ -3,7 +3,7 @@
 #AutoIt3Wrapper_Icon=Icon_1.ico
 #AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=2.8.2.0
+#AutoIt3Wrapper_Res_Fileversion=2.8.3.0
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_Au3Check_Stop_OnWarning=y
@@ -17,7 +17,6 @@
 	作者:        甲壳虫 < jdchenjian@gmail.com >
 	网站:        http://hi.baidu.com/jdchenjian
 	脚本说明：   MyChrome - 可自动更新的 Google Chrome 便携版
-	脚本版本：
 #ce ----------------------------------------------------------------------------
 #include <Date.au3>
 #include <Constants.au3>
@@ -37,7 +36,7 @@ Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "2.8.2" ; MyChrome version
+Global Const $AppVersion = "2.8.3" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
 Global $LastCheckUpdate, $CheckingInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome
@@ -175,8 +174,11 @@ If FileExists($ExtAppPath) Then
 	EndIf
 EndIf
 
-
 CreateSettingsShortcut(@ScriptDir & "\" & $AppName & "设置.vbs")
+
+If @OSVersion <> "WIN_XP" Then
+	CheckPinnedPrograms()
+EndIf
 
 ;~ Check mychrome update
 If $AutoUpdateApp <> 0 And _DateDiff("D", $LastCheckAppUpdate, _NowCalcDate()) >= 1 Then
@@ -217,7 +219,35 @@ If 0 Then ; ========= Lines below will never be executed =========
 EndIf ; ============= Lines above will never be executed =========
 
 Exit
-#EndRegion ======================= 以上为自动执行部分 ======================================
+#EndRegion 自动执行部分
+
+;~ for win7/vista or newer
+Func CheckPinnedPrograms()
+	Local $PinnedToTaskBar = EnvGet("APPDATA") & '\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'
+	If Not FileExists($PinnedToTaskBar) Then
+		Return
+	EndIf
+
+	Local $search = FileFindFirstFile($PinnedToTaskBar & "\*.lnk")
+	If $search = -1 Then
+		Return
+	EndIf
+	Local $file, $ShellObj, $objShortcut, $TargetPath
+	$ShellObj = ObjCreate("WScript.Shell")
+	If Not @error Then
+		While 1
+			$file = $PinnedToTaskBar & "\" & FileFindNextFile($search)
+			If @error Then ExitLoop
+			$objShortcut = $ShellObj.CreateShortCut($file)
+			$TargetPath = $objShortcut.TargetPath
+			If $TargetPath = $ChromePath Then
+				$objShortcut.TargetPath = @ScriptFullPath
+				$objShortcut.Save
+			EndIf
+		WEnd
+	EndIf
+	FileClose($search)
+EndFunc   ;==>CheckPinnedPrograms
 
 
 ;~ 设置批处理
@@ -227,9 +257,9 @@ Func CreateSettingsShortcut($fname)
 		FileDelete($fname)
 		FileWrite($fname, 'CreateObject("shell.application").ShellExecute "' & @ScriptName & '", "-set"')
 	EndIf
-EndFunc
+EndFunc   ;==>CreateSettingsShortcut
 
-#region 设置默认浏览器
+#Region 设置默认浏览器
 ;~ 检查默认浏览器，当检测到由 MyChrome 启动的 Chrome 浏览器被设为默认客户端时，
 ;~ 将默认浏览器重定向至 MyChrome。设置默认浏览器必须修改的注册表内容并不止这些，
 ;~ MyChrome 只是在 google chrome 浏览器将自己设为默认的基础上作必要的修改。
@@ -324,8 +354,8 @@ Func SetDefaultGlobal($ChromePath, $Progid)
 		RegWrite('HKLM64\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe', 'Path', 'REG_SZ', @ScriptDir)
 	EndIf
 	MsgBox(64, "MyChrome", "已将当前配置的 Google Chrome 设为您的默认浏览器!")
-EndFunc
-#endregion 设置默认浏览器
+EndFunc   ;==>SetDefaultGlobal
+#EndRegion 设置默认浏览器
 
 ;~ 查检 MyChrome 更新
 Func CheckAppUpdate()
@@ -344,8 +374,8 @@ Func CheckAppUpdate()
 		If $AppVersion = $LatestAppVer Or $IgnoreAppVer = $LatestAppVer Then Return
 		If $AutoUpdateApp = 1 Then
 			$msg = MsgBoxE(66, 'MyChrome 更新', "MyChrome " & $LatestAppVer & " 已发布，更新内容：" & _
-				@CRLF & @CRLF & $update & @CRLF & @CRLF & "是否自动更新？", 0, '', '是', '否', '不再提示')
-			If $msg = 4 or $msg = 5 Then ; 4-否 or 5-IGNORE
+					@CRLF & @CRLF & $update & @CRLF & @CRLF & "是否自动更新？", 0, '', '是', '否', '不再提示')
+			If $msg = 4 Or $msg = 5 Then ; 4-否 or 5-IGNORE
 				If $msg = 5 Then IniWrite($inifile, "Settings", "IgnoreAppVer", $LatestAppVer)
 				Return
 			EndIf
@@ -430,7 +460,7 @@ Func Settings()
 	$hSettingsGUI = GUICreate("MyChrome - 打造自己的 Google Chrome 便携版", 500, 430)
 	GUISetOnEvent($GUI_EVENT_CLOSE, "ExitApp")
 	GUICtrlCreateLabel("MyChrome " & $AppVersion & " (" & StringLeft(FileGetTime(@ScriptFullPath, 0, 1), 8) & _
-		") by 甲壳虫 <jdchenjian@gmail.com>", 5, 5, 490, -1, $SS_CENTER)
+			") by 甲壳虫 <jdchenjian@gmail.com>", 5, 5, 490, -1, $SS_CENTER)
 	GUICtrlSetCursor(-1, 0)
 	GUICtrlSetColor(-1, 0x0000FF)
 	GUICtrlSetTip(-1, "点击打开 MyChrome 主页")
@@ -463,7 +493,7 @@ Func Settings()
 	$hChannel = GUICtrlCreateCombo("", 130, 150, 120, 20, $CBS_DROPDOWNLIST)
 	GUICtrlSetData(-1, "Stable|Beta|Dev|Canary|Chromium-Continuous|Chromium-Snapshots", $Channel)
 	GUICtrlSetTip(-1, "Stable - 稳定版(正式版)" & @CRLF & "Beta - 测试版" & @CRLF & "Dev - 开发版" & @CRLF & _
-		"Canary - 金丝雀版" & @CRLF & "Chromium - 更新快但不稳定")
+			"Canary - 金丝雀版" & @CRLF & "Chromium - 更新快但不稳定")
 	GUICtrlSetOnEvent(-1, "CheckChrome")
 
 	GUICtrlCreateLabel("检查浏览器更新：", 20, 184, 110, 20)
@@ -607,7 +637,7 @@ Func Settings()
 	If @OSVersion = "WIN_XP" Or ($WinVer And $WinVer < 6) Then ; Win Vista / Win 7 version 6.x
 		$LOCALAPPDATA = EnvGet("USERPROFILE") & "\Local Settings\Application Data" ; WinXP
 	Else
-		$LOCALAPPDATA = EnvGet("LOCALAPPDATA") ; win7/vista or up
+		$LOCALAPPDATA = EnvGet("LOCALAPPDATA") ; win7/vista or newer
 	EndIf
 
 	Local $ChromeExists = CheckChromeInSystem($Channel) ; 检查系统中是否有 Channel 对应的 Chrome 程序文件
@@ -640,7 +670,7 @@ Func GetChromePath()
 	Local $sChromePath
 	If @GUI_CtrlId = $hGetChromePath Then ; 查找Chrome主程序
 		$sChromePath = FileOpenDialog("选择 Chrome 浏览器主程序（chrome.exe）", @ScriptDir, _
-			"可执行文件(*.exe)", 1 + 2, "chrome.exe", $hSettingsGUI)
+				"可执行文件(*.exe)", 1 + 2, "chrome.exe", $hSettingsGUI)
 		If $sChromePath = "" Then Return
 	Else ; @GUI_CtrlId = $hGetChromeDir 选择Chrome目标文件夹
 		$sChromePath = FileSelectFolder("选择 Chrome 浏览器程序文件夹", "", 1 + 4, @ScriptDir & "\Chrome", $hSettingsGUI)
@@ -663,7 +693,7 @@ EndFunc   ;==>GetChromePath
 Func GetExtAppPath()
 	Local $path
 	$path = FileOpenDialog("选择与浏览器一起启动的外部程序", @ScriptDir, _
-		"可执行文件 (*.exe)|任意文件 (*.*)", 1 + 2, "", $hSettingsGUI)
+			"可执行文件 (*.exe)|任意文件 (*.*)", 1 + 2, "", $hSettingsGUI)
 	If $path = "" Then Return
 	$ExtAppPath = RelativePath($path) ; 绝对路径转成相对路径（如果可以）
 	GUICtrlSetData($hExtAppPath, $ExtAppPath)
@@ -673,7 +703,7 @@ EndFunc   ;==>GetExtAppPath
 ; 指定用户数据文件夹
 Func GetUserDataDir()
 	Local $sUserDataDir = FileSelectFolder("选择一个文件夹用来保存用户数据文件", "", 1 + 4, _
-		@ScriptDir & "\User Data", $hSettingsGUI)
+			@ScriptDir & "\User Data", $hSettingsGUI)
 	If $sUserDataDir <> "" Then
 		$UserDataDir = RelativePath($sUserDataDir) ; 绝对路径转成相对路径（如果可以）
 		GUICtrlSetData($hUserDataDir, $UserDataDir)
@@ -782,8 +812,8 @@ Func SettingsApply()
 	Local $ChromeSource = GUICtrlRead($hChromeSource)
 	If $ChromeSource <> "从网络下载" And Not FileExists($ChromePath) Then ; Chrome 路径
 		Local $msg = MsgBox(36, "MyChrome", "浏览器程序文件不存在或者路径错误：" & @CRLF & $ChromePath & @CRLF & @CRLF & _
-			"请重新设置 chrome 浏览器路径，或者选择从网络下载浏览器程序文件。" & @CRLF & @CRLF & _
-			"需要从网络下载 Google Chrome 最新版吗？", 0, $hSettingsGUI)
+				"请重新设置 chrome 浏览器路径，或者选择从网络下载浏览器程序文件。" & @CRLF & @CRLF & _
+				"需要从网络下载 Google Chrome 最新版吗？", 0, $hSettingsGUI)
 		If $msg = 6 Then
 			GUICtrlSetData($hChromeSource, "")
 			GUICtrlSetData($hChromeSource, "----  请选择  ----|从系统中提取|从网络下载|从离线安装文件提取", "从网络下载")
@@ -809,7 +839,7 @@ Func SettingsApply()
 	If $CopyData = $GUI_CHECKED Then
 		If FileExists(StringRegExpReplace($UserDataDir, "\\$", "") & "\Local State") Then
 			$msg = MsgBox(292, "MyChrome", '“' & $UserDataDir & '”中已存在 Google Chrome 数据文件。如果继续，这些文件会被覆盖。' & _
-				@CRLF & @CRLF & '请点击“是”继续，或者点击“否”重新选择文件夹。', 0, $hSettingsGUI)
+					@CRLF & @CRLF & '请点击“是”继续，或者点击“否”重新选择文件夹。', 0, $hSettingsGUI)
 			If $msg = 7 Then
 				GetUserDataDir()
 				Return SetError(3)
@@ -883,7 +913,7 @@ Func CheckChromeInSystem($Channel)
 		$Subkey = "Software\Google\Update\Clients\{8A69D345-D564-463c-AFF1-A69D9E530F96}"
 	EndIf
 
-	;~ 复制用户数据文件选项
+;~ 复制用户数据文件选项
 	If FileExists($DefaultUserDataDir & "\Local State") Then
 		GUICtrlSetState($hCopyData, $GUI_ENABLE)
 		GUICtrlSetTip($hCopyData, "复制 Google Chrome 用户数据文件：" & @CRLF & $DefaultUserDataDir)
@@ -972,7 +1002,7 @@ Func GetChrome()
 		_GUICtrlComboBox_SelectString($hChromeSource, "----  请选择  ----")
 	ElseIf $source = "从离线安装文件提取" Then
 		Local $installer = FileOpenDialog("选择离线安装文件（chrome_installer.exe）", @ScriptDir, _
-			"可执行文件(*.exe)", 1 + 2, "chrome_installer.exe", $hSettingsGUI)
+				"可执行文件(*.exe)", 1 + 2, "chrome_installer.exe", $hSettingsGUI)
 		If $installer <> "" Then
 			$ChromePath = GUICtrlRead($hChromePath)
 			$ChromePath = AbsolutePath($ChromePath)
@@ -1048,7 +1078,7 @@ EndFunc   ;==>ToggleCacheSize
 ;~ 选择缓存目录
 Func SelectCacheDir()
 	Local $sCacheDir = FileSelectFolder("选择一个文件夹用来保存浏览器缓存文件", "", 1 + 4, _
-		AbsolutePath($UserDataDir) & "\Default", $hSettingsGUI)
+			AbsolutePath($UserDataDir) & "\Default", $hSettingsGUI)
 	If $sCacheDir <> "" Then
 		$CacheDir = RelativePath($sCacheDir) ; 绝对路径转成相对路径（如果可以）
 		GUICtrlSetData($hCacheDir, $CacheDir)
@@ -1419,15 +1449,15 @@ Func DownloadChrome($url, $localfile, $version = "", $DownloadThreads = 3, $Prox
 	_SetVar("DLInfo", "|||||准备下载 Google Chrome ...")
 	AdlibRegister("ResetTimer", 1000) ; 定时向父进程发送时间信息（响应信息）
 
-	Local $hHttpOpen, $ret, $error
+	Local $hHTTPOpen, $ret, $error
 	If $ProxySever <> "" And $ProxyPort <> "" Then
-		$hHttpOpen = _WinHttpOpen(Default, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $ProxySever & ":" & $ProxyPort, "localhost")
+		$hHTTPOpen = _WinHttpOpen(Default, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $ProxySever & ":" & $ProxyPort, "localhost")
 	Else
-		$hHttpOpen = _WinHttpOpen() ; 无代理
+		$hHTTPOpen = _WinHttpOpen() ; 无代理
 	EndIf
-	_WinHttpSetTimeouts($hHttpOpen, 0, 10000, 10000, 10000) ; 设置超时
+	_WinHttpSetTimeouts($hHTTPOpen, 0, 10000, 10000, 10000) ; 设置超时
 	While 1
-		$ret = __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $hHttpOpen, $DownLoadInfo)
+		$ret = __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $hHTTPOpen, $DownLoadInfo)
 		$error = @error
 		_SetVar("DLInfo", $ret)
 
@@ -1449,13 +1479,13 @@ Func DownloadChrome($url, $localfile, $version = "", $DownloadThreads = 3, $Prox
 		WEnd
 	WEnd
 
-	_WinHttpCloseHandle($hHttpOpen)
+	_WinHttpCloseHandle($hHTTPOpen)
 	FileClose($hDlFile)
 	If Not WinExists($__hwnd_vars) Then
 		DirRemove($TempDir, 1) ; 没有父进程则删除文件
 	EndIf
 EndFunc   ;==>DownloadChrome
-Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $hHttpOpen, ByRef $DownLoadInfo)
+Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $hHTTPOpen, ByRef $DownLoadInfo)
 	Local $i, $header, $remotesize, $aThread, $match
 	Local $TempDir = StringMid($localfile, 1, StringInStr($localfile, "\", 0, -1) - 1)
 	Local $resume = IsArray($DownLoadInfo)
@@ -1469,7 +1499,7 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 		; 测试服务器是否支持断点续传、获取远程文件大小，分块
 		_SetVar("DLInfo", "|||||正在连接 Google Chrome 服务器，获取最新版信息...")
 		For $i = 1 To 3
-			$aThread = CreateThread($url, $hHttpOpen, "10-20")
+			$aThread = CreateThread($url, $hHTTPOpen, "10-20")
 			$header = _WinHttpQueryHeaders($aThread[0])
 			_WinHttpCloseHandle($aThread[0])
 			_WinHttpCloseHandle($aThread[1])
@@ -1523,7 +1553,7 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 		EndIf
 		For $j = 1 To 2
 			If Not WinExists($__hwnd_vars) Then ExitLoop
-			$aThread = CreateThread($url, $hHttpOpen, $range)
+			$aThread = CreateThread($url, $hHTTPOpen, $range)
 			If Not @error Then ExitLoop
 			Sleep(200)
 		Next
@@ -1588,7 +1618,7 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 				If $n Then
 					For $j = 1 To 3 ; 重试3次
 						Sleep(200)
-						$aThread = CreateThread($url, $hHttpOpen, $DownLoadInfo[$n][1] & "-" & $DownLoadInfo[$n][2])
+						$aThread = CreateThread($url, $hHTTPOpen, $DownLoadInfo[$n][1] & "-" & $DownLoadInfo[$n][2])
 						If Not @error Then
 							$DownLoadInfo[$n][3] = $aThread[0] ; $hHttpRequest
 							$DownLoadInfo[$n][4] = $aThread[1] ; $hHttpConnect
@@ -1603,7 +1633,7 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 				$DownLoadInfo[$i][4] = 0 ; 出错标志
 				For $j = 1 To 3 ; 重试3次
 					Sleep(200)
-					$aThread = CreateThread($url, $hHttpOpen, $DownLoadInfo[$i][1] & "-" & $DownLoadInfo[$i][2])
+					$aThread = CreateThread($url, $hHTTPOpen, $DownLoadInfo[$i][1] & "-" & $DownLoadInfo[$i][2])
 					If Not @error Then
 						$DownLoadInfo[$i][3] = $aThread[0] ; $hHttpRequest
 						$DownLoadInfo[$i][4] = $aThread[1] ; $hHttpConnect
@@ -1644,7 +1674,7 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 			$timediff = TimerDiff($timeinit)
 			_ArrayPush($S, $timediff & ":" & $size)
 			$a = StringSplit($S[0], ":")
-			If $a[0] >=2 Then
+			If $a[0] >= 2 Then
 				$speed = ($size - $a[2]) / ($timediff - $a[1]) / 1.024
 				$speed = StringFormat('%.1f', $speed)
 			EndIf
@@ -1674,15 +1704,15 @@ EndFunc   ;==>__DownloadChrome
 ;                  Success: [$hHttpRequest, $hHttpConnect]
 ;                  failure: [0, 0] and set @error
 ;============================================================================================
-Func CreateThread($url, $hHttpOpen, $range = "")
+Func CreateThread($url, $hHTTPOpen, $range = "")
 	Local $hHttpConnect, $hHttpRequest, $aHandle
 
 	Local $aUrl = HttpParseUrl($url) ; $aUrl[0] - host, $aUrl[1] - page, $aUrl[2] - port
-	$hHttpConnect = _WinHttpConnect($hHttpOpen, $aUrl[0], $aUrl[2])
+	$hHttpConnect = _WinHttpConnect($hHTTPOpen, $aUrl[0], $aUrl[2])
 
 	If $aUrl[2] = 443 Then
 		$hHttpRequest = _WinHttpOpenRequest($hHttpConnect, "GET", $aUrl[1], Default, Default, Default, _
-			BitOR($WINHTTP_FLAG_SECURE, $WINHTTP_FLAG_ESCAPE_DISABLE))
+				BitOR($WINHTTP_FLAG_SECURE, $WINHTTP_FLAG_ESCAPE_DISABLE))
 	Else
 		$hHttpRequest = _WinHttpOpenRequest($hHttpConnect, "GET", $aUrl[1])
 	EndIf
