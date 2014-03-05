@@ -1,3 +1,7 @@
-2.8.2
-https://googledrive.com/host/0B21uwFpGQgjNWWgzV0dJVUI3YUU/MyChrome_v2.8.2.zip
-修复Chrome偏好设置文件损坏的问题
+2.8.3
+https://googledrive.com/host/0B21uwFpGQgjNWWgzV0dJVUI3YUU/MyChrome_v2.8.3.zip
+解决 Windows Vista/7/8 等系统中，浏览器不能锁定到任务栏或者锁定后任务栏有两个浏览器图标的问题。
+
+锁定方法：
+双击MyChrome启动浏览器 ==> 右键单击任务栏的浏览器图标，选择“将此程序锁定到任务栏” ==> 重新运行MyChrome一次。
+
