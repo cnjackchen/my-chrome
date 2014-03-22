@@ -3,7 +3,7 @@
 #AutoIt3Wrapper_Icon=Icon_1.ico
 #AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=2.8.3.0
+#AutoIt3Wrapper_Res_Fileversion=2.9.0.0
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_Au3Check_Stop_OnWarning=y
@@ -36,23 +36,26 @@ Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "2.8.3" ; MyChrome version
+Global Const $AppVersion = "2.9" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
-Global $LastCheckUpdate, $CheckingInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome
+Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome
 Global $EnableProxy, $ProxySever, $ProxyPort
 Global $AutoUpdateApp, $LastCheckAppUpdate
+Global $RunInBackground, $ExtAppPath, $ExtAppParam, $ExtAppAutoExit, $AppPID, $ExtAppPID
+Global $ExtAppPath2, $ExtAppParam2
+Global $TaskBarDir, $TaskBarLastChange
 
-#Region ; ====设置界面全局变量====
+
 Global $hSettingsGUI
 Global $hSettingsOK, $hSettingsApply, $hStausbar
 Global $hChromePath, $hGetChromeDir, $hGetChromePath, $hChromeSource, $hCheckUpdate
-Global $hChannel, $hCheckingInterval, $hLatestChromeVer, $hCurrentVer, $hUserDataDir, $hCopyData
-Global $hAutoUpdateApp, $hCustomCacheDir, $hCacheDir, $hSelectCacheDir, $hCustomCacheSize, $hCacheSize
+Global $hChannel, $hUpdateInterval, $hLatestChromeVer, $hCurrentVer, $hUserDataDir, $hCopyData
+Global $hAutoUpdateApp, $hCacheDir, $hSelectCacheDir, $hCacheSize
 Global $hparams, $hDownloadThreads, $hEnableProxy, $hProxySever, $hProxyPort
 Global $LOCALAPPDATA, $hAskBeforeUpdateChrome
-Global $hExtAppPath, $ExtAppPath, $hExtAppParam, $ExtAppParam
-#EndRegion ; ====设置界面全局变量====
+Global $hRunInBackground, $hExtAppPath, $hExtAppParam, $hExtAppAutoExit
+Global $hExtAppPath2, $hExtAppParam2
 
 Global $ChromeFileVersion, $ChromeLastChange, $LatestChromeVer, $LatestChromeUrl
 Global $DefaultChromeDir, $DefaultChromeVer, $DefaultUserDataDir
@@ -66,58 +69,85 @@ Global $aDlInfo[6]
 ;~ 4 - The error value for the download. The value itself is arbitrary. Testing that the value is non-zero is sufficient for determining if an error occurred.
 ;~ 5 - The extended value for the download. The value is arbitrary and is primarily only useful to the AutoIt developers.
 
-#Region 自动执行部分
+#Region ========== 自动执行部分 ==============
 FileChangeDir(@ScriptDir)
 ; 得到程序本身的文件名（不含扩展名），用作 .ini 文件名，以便于允许多个MyChrome 更名后可放在同一文件夹中
 $AppName = StringLeft(@ScriptName, StringInStr(@ScriptName, ".", 0, -1) - 1)
 $inifile = @ScriptDir & "\" & $AppName & ".ini"
 If Not FileExists($inifile) Then
 	$FirstRun = 1
-	IniWrite($inifile, "Settings", "ChromePath", "Chrome\chrome.exe")
-	IniWrite($inifile, "Settings", "UserDataDir", "User Data")
-	IniWrite($inifile, "Settings", "CacheDir", "*")
+	IniWrite($inifile, "Settings", "AppVersion", $AppVersion)
+	IniWrite($inifile, "Settings", "ChromePath", ".\Chrome\chrome.exe")
+	IniWrite($inifile, "Settings", "UserDataDir", ".\User Data")
+	IniWrite($inifile, "Settings", "CacheDir", "")
 	IniWrite($inifile, "Settings", "CacheSize", 0)
 	IniWrite($inifile, "Settings", "Channel", "Stable")
-	IniWrite($inifile, "Settings", "LastCheckUpdate", "2012/01/01")
-	IniWrite($inifile, "Settings", "CheckingInterval", 1)
+	IniWrite($inifile, "Settings", "LastCheckUpdate", "2014/01/01 00:00:00")
+	IniWrite($inifile, "Settings", "UpdateInterval", 24)
 	IniWrite($inifile, "Settings", "AskBeforeUpdateChrome", 1) ; 1 - 更新前询问
 	IniWrite($inifile, "Settings", "EnableUpdateProxy", 0)
 	IniWrite($inifile, "Settings", "UpdateProxy", "")
 	IniWrite($inifile, "Settings", "UpdatePort", "")
 	IniWrite($inifile, "Settings", "DownloadThreads", 3)
 	IniWrite($inifile, "Settings", "Params", "")
+	IniWrite($inifile, "Settings", "RunInBackground", 1)
 	IniWrite($inifile, "Settings", "AutoUpdateApp", 1) ; 0 - 什么也不做，1 - 通知我，2 - 自动更新（无提示）
-	IniWrite($inifile, "Settings", "LastCheckAppUpdate", "2012/01/01")
+	IniWrite($inifile, "Settings", "LastCheckAppUpdate", "2014/01/01 00:00:00")
 	IniWrite($inifile, "Settings", "CheckDefaultBrowser", 1)
 	IniWrite($inifile, "Settings", "ExtAppPath", "")
 	IniWrite($inifile, "Settings", "ExtAppParam", "")
+	IniWrite($inifile, "Settings", "ExtAppAutoExit", 1)
+	IniWrite($inifile, "Settings", "ExtAppPath2", "")
+	IniWrite($inifile, "Settings", "ExtAppParam2", "")
 EndIf
 ;~ 从配置文件读取参数
-$ChromePath = IniRead($inifile, "Settings", "ChromePath", "Chrome\chrome.exe")
-$UserDataDir = IniRead($inifile, "Settings", "UserDataDir", "User Data")
-$CacheDir = IniRead($inifile, "Settings", "CacheDir", "*")
-$CacheSize = IniRead($inifile, "Settings", "CacheSize", 0)
+$ChromePath = IniRead($inifile, "Settings", "ChromePath", ".\Chrome\chrome.exe")
+$UserDataDir = IniRead($inifile, "Settings", "UserDataDir", ".\User Data")
+$CacheDir = IniRead($inifile, "Settings", "CacheDir", "")
+$CacheSize = IniRead($inifile, "Settings", "CacheSize", 0)*1
 $Channel = IniRead($inifile, "Settings", "Channel", "Stable")
-$LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2012/01/01")
-$CheckingInterval = IniRead($inifile, "Settings", "CheckingInterval", 1)
-If Not StringIsInt($CheckingInterval) Then $CheckingInterval = 1
-$AskBeforeUpdateChrome = IniRead($inifile, "Settings", "AskBeforeUpdateChrome", 1)
-$EnableProxy = IniRead($inifile, "Settings", "EnableUpdateProxy", 0)
+$LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2014/01/01 00:00:00")
+$UpdateInterval = IniRead($inifile, "Settings", "UpdateInterval", "")
+$AskBeforeUpdateChrome = IniRead($inifile, "Settings", "AskBeforeUpdateChrome", 1)*1
+$EnableProxy = IniRead($inifile, "Settings", "EnableUpdateProxy", 0)*1
 $ProxySever = IniRead($inifile, "Settings", "UpdateProxy", "")
 $ProxyPort = IniRead($inifile, "Settings", "UpdatePort", "")
-$DownloadThreads = IniRead($inifile, "Settings", "DownloadThreads", 3)
+$DownloadThreads = IniRead($inifile, "Settings", "DownloadThreads", 3)*1
 $Params = IniRead($inifile, "Settings", "Params", "")
-$AutoUpdateApp = IniRead($inifile, "Settings", "AutoUpdateApp", 1)
-$LastCheckAppUpdate = IniRead($inifile, "Settings", "LastCheckAppUpdate", "2012/01/01")
-$CheckDefaultBrowser = IniRead($inifile, "Settings", "CheckDefaultBrowser", 1)
+$RunInBackground = IniRead($inifile, "Settings", "RunInBackground", 1)*1
+$AutoUpdateApp = IniRead($inifile, "Settings", "AutoUpdateApp", 1)*1
+$LastCheckAppUpdate = IniRead($inifile, "Settings", "LastCheckAppUpdate", "2014/01/01 00:00:00")
+$CheckDefaultBrowser = IniRead($inifile, "Settings", "CheckDefaultBrowser", 1)*1
 $ExtAppPath = IniRead($inifile, "Settings", "ExtAppPath", "")
 $ExtAppParam = IniRead($inifile, "Settings", "ExtAppParam", "")
-If $EnableProxy = 1 Then
+$ExtAppAutoExit = IniRead($inifile, "Settings", "ExtAppAutoExit", 1)*1
+$ExtAppPath2 = IniRead($inifile, "Settings", "ExtAppPath2", "")
+$ExtAppParam2 = IniRead($inifile, "Settings", "ExtAppParam2", "")
+
+#region ========= 兼容旧版 MyChrome =========
+If $AppVersion <> IniRead($inifile, "Settings", "AppVersion", "") Then
+	$FirstRun = 1
+	IniWrite($inifile, "Settings", "AppVersion", $AppVersion)
+	If $UpdateInterval = "" Then
+		$UpdateInterval = IniRead($inifile, "Settings", "CheckingInterval", 1)
+		If $UpdateInterval <> -1 Then $UpdateInterval = $UpdateInterval*24
+		IniDelete($inifile, "Settings", "CheckingInterval")
+		IniWrite($inifile, "Settings", "UpdateInterval", $UpdateInterval)
+	EndIf
+	If $CacheDir = "*" Then
+		$CacheDir = ""
+		IniWrite($inifile, "Settings", "CacheDir", "")
+	EndIf
+EndIf
+#endregion ========= 兼容旧版 MyChrome =========
+
+If $EnableProxy Then
 	HttpSetProxy(2, $ProxySever & ":" & $ProxyPort)
 EndIf
 
-;~ 第一个启动参数为“-set”，或第一次运行，Chrome.exe、用户数据文件夹不存在，则显示设置窗口
 Opt("ExpandEnvStrings", 1)
+EnvSet("APP", @ScriptDir)
+;~ 第一个启动参数为“-set”，或第一次运行，Chrome.exe、用户数据文件夹不存在，则显示设置窗口
 If ($cmdline[0] = 1 And $cmdline[1] = "-set") Or $FirstRun Or Not FileExists($ChromePath) Or ($UserDataDir <> "" And Not FileExists($UserDataDir)) Then
 	CreateSettingsShortcut(@ScriptDir & "\" & $AppName & "设置.vbs")
 	Settings()
@@ -130,12 +160,12 @@ $UserDataDir = AbsolutePath($UserDataDir)
 
 ;~ 第一个参数为 -SetDefaultGlobal，表明这是为写注册表HKLM而以管理员身份运行的进程
 ;~ $cmdline[1] - -SetDefaultGlobal  $cmdline[2] - $Progid
-If $CheckDefaultBrowser = 1 And IsAdmin() And $cmdline[0] = 2 And $cmdline[1] = "-SetDefaultGlobal" Then
+If $CheckDefaultBrowser And IsAdmin() And $cmdline[0] = 2 And $cmdline[1] = "-SetDefaultGlobal" Then
 	SetDefaultGlobal($ChromePath, $cmdline[2])
 	Exit ; 完成任务，退出
 EndIf
 
-If $CheckDefaultBrowser = 1 Then
+If $CheckDefaultBrowser Then
 	CheckDefaultBrowser($ChromePath)
 EndIf
 
@@ -155,80 +185,146 @@ For $i = 1 To $cmdline[0]
 Next
 
 $PortableParam &= ' --user-data-dir="' & $UserDataDir & '"'
-If $CacheDir <> "*" Then
+If $CacheDir <> "" Then
 	$CacheDir = AbsolutePath($CacheDir)
 	$PortableParam &= ' --disk-cache-dir="' & $CacheDir & '"'
 EndIf
-If $CacheSize <> 0 And StringIsDigit($CacheSize) Then
+If $CacheSize <> 0 Then
 	$PortableParam &= ' --disk-cache-size=' & $CacheSize
 EndIf
 
 ; 启动浏览器，工作目录设为Chrome所在目录
-Run('"' & $ChromePath & '" ' & $PortableParam & ' ' & $Params, $ChromeDir)
+$AppPID = Run('"' & $ChromePath & '" ' & $PortableParam & ' ' & $Params, $ChromeDir)
 
 ; Start the external app
 If FileExists($ExtAppPath) Then
 	$file = StringRegExpReplace($ExtAppPath, '.*\\', '')
 	If Not ProcessExists($file) Then
-		Run('"' & $ExtAppPath & '" ' & $ExtAppParam)
+		$ExtAppPID = Run('"' & $ExtAppPath & '" ' & $ExtAppParam)
 	EndIf
 EndIf
 
 CreateSettingsShortcut(@ScriptDir & "\" & $AppName & "设置.vbs")
 
 If @OSVersion <> "WIN_XP" Then
-	CheckPinnedPrograms()
+	$TaskBarDir = EnvGet("APPDATA") & "\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar"
+EndIf
+PostCheck()
+
+If Not $RunInBackground Then
+	Exit
 EndIf
 
-;~ Check mychrome update
-If $AutoUpdateApp <> 0 And _DateDiff("D", $LastCheckAppUpdate, _NowCalcDate()) >= 1 Then
-	CheckAppUpdate()
-EndIf
+ReduceMemory()
+AdlibRegister("UpdateCheck", 300000)
 
-; 检查google chrome更新
-If $CheckingInterval <> 0 Then
-	$var = _DateDiff("D", $LastCheckUpdate, _NowCalcDate())
-	If $CheckingInterval = -1 Or $var < $CheckingInterval Then Exit ; 不需检查更新，则退出
-EndIf
+; wait for chrome exit
+While ProcessExists($AppPID)
+	Sleep(2000)
+	If FileExists($TaskBarDir) Then
+		CheckPinnedPrograms()
+	EndIf
+	If $CheckDefaultBrowser Then
+		CheckDefaultBrowser($ChromePath)
+	EndIf
+WEnd
 
-If UpdateChrome($ChromePath, $Channel) Then
-	; 检测 chrome 是否正在运行
-	$IsRunning = 0
-	$list = ProcessList($ChromeExe)
-	For $i = 1 To $list[0][0]
-		If StringInStr(_GetProcPath($list[$i][1]), $ChromePath) Then
-			$IsRunning = 1
-			ExitLoop
-		EndIf
-	Next
-
-	; 重启程序，恢复最后的标签页
-	If Not $IsRunning Then
-		If @Compiled Then
-			Run('"' & @AutoItExe & '" --restore-last-session')
-		Else
-			Run('"' & @AutoItExe & '" "' & @ScriptFullPath & '" --restore-last-session')
-		EndIf
+If $ExtAppAutoExit Then
+	If ProcessExists($ExtAppPID) Then
+		ProcessClose($ExtAppPID)
 	EndIf
 EndIf
+
+; Start external app
+If FileExists($ExtAppPath2) Then
+	$file = StringRegExpReplace($ExtAppPath2, '.*\\', '')
+	If Not ProcessExists($file) Then
+		ShellExecute($ExtAppPath2, $ExtAppParam2)
+	EndIf
+EndIf
+
 
 If 0 Then ; ========= Lines below will never be executed =========
 	; put functions here to prevent these functions from being stripped by Obfuscator
 	GetLatestVersion("")
 	DownloadChrome("", "")
 EndIf ; ============= Lines above will never be executed =========
-
 Exit
-#EndRegion 自动执行部分
+#EndRegion ========== 自动执行部分 ==============
+
+
+Func UpdateCheck()
+	;~ Check mychrome update
+	If $AutoUpdateApp <> 0 And _DateDiff("h", $LastCheckAppUpdate, _NowCalc()) >= 24 Then
+		CheckAppUpdate()
+	EndIf
+
+	; 检查google chrome更新
+	If $UpdateInterval > 0 Then
+		Local $var = _DateDiff("h", $LastCheckUpdate, _NowCalc())
+		If $var >= $UpdateInterval Then
+			If UpdateChrome($ChromePath, $Channel) Then
+				; 检测 chrome 是否正在运行
+				$IsRunning = 0
+				$list = ProcessList($ChromeExe)
+				For $i = 1 To $list[0][0]
+					If StringInStr(_GetProcPath($list[$i][1]), $ChromePath) Then
+						$IsRunning = 1
+						ExitLoop
+					EndIf
+				Next
+				; 重启程序，恢复最后的标签页
+				If Not $IsRunning Then
+					RestartAPP("--restore-last-session")
+				EndIf
+			EndIf
+		EndIf
+	EndIf
+	ReduceMemory()
+EndFunc
+
+Func PostCheck()
+	If FileExists($TaskBarDir) Then
+		CheckPinnedPrograms()
+	EndIf
+
+	;~ Check mychrome update
+	If $AutoUpdateApp <> 0 And _DateDiff("h", $LastCheckAppUpdate, _NowCalc()) >= 24 Then
+		CheckAppUpdate()
+	EndIf
+
+	; 检查google chrome更新
+	If $UpdateInterval <> -1 Then
+		Local $var = _DateDiff("h", $LastCheckUpdate, _NowCalc())
+		If $var >= $UpdateInterval Then
+			If UpdateChrome($ChromePath, $Channel) Then
+				; 检测 chrome 是否正在运行
+				$IsRunning = 0
+				$list = ProcessList($ChromeExe)
+				For $i = 1 To $list[0][0]
+					If StringInStr(_GetProcPath($list[$i][1]), $ChromePath) Then
+						$IsRunning = 1
+						ExitLoop
+					EndIf
+				Next
+				; 重启程序，恢复最后的标签页
+				If Not $IsRunning Then
+					RestartAPP("--restore-last-session")
+				EndIf
+			EndIf
+		EndIf
+	EndIf
+EndFunc
 
 ;~ for win7/vista or newer
 Func CheckPinnedPrograms()
-	Local $PinnedToTaskBar = EnvGet("APPDATA") & '\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'
-	If Not FileExists($PinnedToTaskBar) Then
+	Local $ftime = FileGetTime($TaskBarDir, 0, 1)
+	If $ftime = $TaskBarLastChange Then
 		Return
 	EndIf
 
-	Local $search = FileFindFirstFile($PinnedToTaskBar & "\*.lnk")
+	$TaskBarLastChange = $ftime
+	Local $search = FileFindFirstFile($TaskBarDir & "\*.lnk")
 	If $search = -1 Then
 		Return
 	EndIf
@@ -236,13 +332,15 @@ Func CheckPinnedPrograms()
 	$ShellObj = ObjCreate("WScript.Shell")
 	If Not @error Then
 		While 1
-			$file = $PinnedToTaskBar & "\" & FileFindNextFile($search)
+			$file = $TaskBarDir & "\" & FileFindNextFile($search)
 			If @error Then ExitLoop
 			$objShortcut = $ShellObj.CreateShortCut($file)
 			$TargetPath = $objShortcut.TargetPath
 			If $TargetPath = $ChromePath Then
 				$objShortcut.TargetPath = @ScriptFullPath
 				$objShortcut.Save
+				$TaskBarLastChange = FileGetTime($TaskBarDir, 0, 1)
+				ExitLoop
 			EndIf
 		WEnd
 	EndIf
@@ -278,7 +376,7 @@ Func CheckDefaultBrowser($ChromePath)
 		$PortableParam = '--no-default-browser-check'
 		Return
 	EndIf
-	If Not StringInStr($command, $ChromePath) Then ; if chrome is not the default
+	If Not StringInStr($command, $ChromePath) Then ; if chrome not set as default
 		Return
 	EndIf
 	$PortableParam = '--no-default-browser-check'
@@ -360,7 +458,8 @@ EndFunc   ;==>SetDefaultGlobal
 ;~ 查检 MyChrome 更新
 Func CheckAppUpdate()
 	Local $var, $match, $LatestAppVer, $msg, $IgnoreAppVer, $update, $url
-	IniWrite($inifile, "Settings", "LastCheckAppUpdate", _NowCalcDate())
+	$LastCheckAppUpdate = _NowCalc()
+	IniWrite($inifile, "Settings", "LastCheckAppUpdate", $LastCheckAppUpdate)
 	$IgnoreAppVer = IniRead($inifile, "Settings", "IgnoreAppVer", "")
 
 	; 从 http://my-chrome.googlecode.com 检查更新
@@ -372,7 +471,7 @@ Func CheckAppUpdate()
 		$url = $match[1]
 		$update = $match[2]
 		If $AppVersion = $LatestAppVer Or $IgnoreAppVer = $LatestAppVer Then Return
-		If $AutoUpdateApp = 1 Then
+		If $AutoUpdateApp Then
 			$msg = MsgBoxE(66, 'MyChrome 更新', "MyChrome " & $LatestAppVer & " 已发布，更新内容：" & _
 					@CRLF & @CRLF & $update & @CRLF & @CRLF & "是否自动更新？", 0, '', '是', '否', '不再提示')
 			If $msg = 4 Or $msg = 5 Then ; 4-否 or 5-IGNORE
@@ -443,21 +542,22 @@ EndFunc   ;==>CheckAppUpdate
 
 ;~ 显示设置窗口
 Func Settings()
-	SplitPath($ChromePath, $ChromeDir, $ChromeExe)
-	$ChromeDir = AbsolutePath($ChromeDir)
-	Switch $CheckingInterval
+	SplitPath(AbsolutePath($ChromePath), $ChromeDir, $ChromeExe)
+	Switch $UpdateInterval
 		Case -1
-			$CheckingInterval = "从不"
-		Case 7
-			$CheckingInterval = "每周"
+			$UpdateInterval = "从不"
+		Case 168
+			$UpdateInterval = "每周"
+		Case 24
+			$UpdateInterval = "每天"
 		Case 1
-			$CheckingInterval = "每天"
+			$UpdateInterval = "每小时"
 		Case Else
-			$CheckingInterval = "每次启动时"
+			$UpdateInterval = "每次启动时"
 	EndSwitch
 	$ChromeFileVersion = FileGetVersion($ChromeDir & "\chrome.dll", "FileVersion")
 	$ChromeLastChange = FileGetVersion($ChromeDir & "\chrome.dll", "LastChange")
-	$hSettingsGUI = GUICreate("MyChrome - 打造自己的 Google Chrome 便携版", 500, 430)
+	$hSettingsGUI = GUICreate("MyChrome - 打造自己的 Google Chrome 便携版", 500, 520)
 	GUISetOnEvent($GUI_EVENT_CLOSE, "ExitApp")
 	GUICtrlCreateLabel("MyChrome " & $AppVersion & " (" & StringLeft(FileGetTime(@ScriptFullPath, 0, 1), 8) & _
 			") by 甲壳虫 <jdchenjian@gmail.com>", 5, 5, 490, -1, $SS_CENTER)
@@ -467,7 +567,7 @@ Func Settings()
 	GUICtrlSetOnEvent(-1, "Website")
 
 	;常规
-	GUICtrlCreateTab(5, 25, 492, 350)
+	GUICtrlCreateTab(5, 25, 492, 440)
 	GUICtrlCreateTabItem("常规")
 
 	GUICtrlCreateGroup("Google Chrome 程序文件", 10, 60, 480, 180)
@@ -489,16 +589,16 @@ Func Settings()
 	GUICtrlSetTip(-1, "获取便携版浏览器程序文件")
 	GUICtrlSetOnEvent(-1, "GetChrome")
 
-	GUICtrlCreateLabel("分支：", 20, 154, 110, 20)
-	$hChannel = GUICtrlCreateCombo("", 130, 150, 120, 20, $CBS_DROPDOWNLIST)
-	GUICtrlSetData(-1, "Stable|Beta|Dev|Canary|Chromium-Continuous|Chromium-Snapshots", $Channel)
+	GUICtrlCreateLabel("分支：", 20, 154, 80, 20)
+	$hChannel = GUICtrlCreateCombo("", 100, 150, 150, 20, $CBS_DROPDOWNLIST)
+	GUICtrlSetData(-1, "Stable|Beta|Dev|Canary|Chromium-Continuous|Chromium-Continuous-x64|Chromium-Snapshots", $Channel)
 	GUICtrlSetTip(-1, "Stable - 稳定版(正式版)" & @CRLF & "Beta - 测试版" & @CRLF & "Dev - 开发版" & @CRLF & _
 			"Canary - 金丝雀版" & @CRLF & "Chromium - 更新快但不稳定")
 	GUICtrlSetOnEvent(-1, "CheckChrome")
 
 	GUICtrlCreateLabel("检查浏览器更新：", 20, 184, 110, 20)
-	$hCheckingInterval = GUICtrlCreateCombo("", 130, 180, 120, 20, $CBS_DROPDOWNLIST)
-	GUICtrlSetData(-1, "每次启动时|每天|每周|从不", $CheckingInterval)
+	$hUpdateInterval = GUICtrlCreateCombo("", 130, 180, 120, 20, $CBS_DROPDOWNLIST)
+	GUICtrlSetData(-1, "每次启动时|每小时|每天|每周|从不", $UpdateInterval)
 
 	GUICtrlCreateLabel("最新版本：", 280, 154, 80, 20)
 	$hLatestChromeVer = GUICtrlCreateLabel("", 360, 154, 140, 20)
@@ -537,8 +637,13 @@ Func Settings()
 	GUICtrlSetOnEvent(-1, "GetUserDataDir")
 	$hCopyData = GUICtrlCreateCheckbox("从系统中提取用户数据文件", 20, 300, -1, 20)
 
-	GUICtrlCreateLabel("MyChrome 发布新版时", 20, 340, 130, 20)
-	$hAutoUpdateApp = GUICtrlCreateCombo("", 150, 335, 120, 20, $CBS_DROPDOWNLIST)
+	$hRunInBackground = GUICtrlCreateCheckbox("MyChrome 在后台运行直至浏览器关闭", 20, 350, 400, 20)
+	GUICtrlSetOnEvent(-1, "RunInBackground")
+	If $RunInBackground Then
+		GUICtrlSetState($hRunInBackground, $GUI_CHECKED)
+	EndIf
+	GUICtrlCreateLabel("MyChrome 发布新版时", 20, 380, 130, 20)
+	$hAutoUpdateApp = GUICtrlCreateCombo("", 150, 375, 120, 20, $CBS_DROPDOWNLIST)
 	Local $sAutoUpdateApp
 
 	If $AutoUpdateApp = 0 Then
@@ -553,35 +658,31 @@ Func Settings()
 	; 高级
 	GUICtrlCreateTabItem("高级")
 	GUICtrlCreateGroup("Google Chrome 缓存", 10, 60, 480, 90)
-	$hCustomCacheDir = GUICtrlCreateCheckbox("缓存位置：", 30, 90, 120, 20)
-	GUICtrlSetOnEvent(-1, "ToggleCacheDir")
-	If $CacheDir <> "*" Then GUICtrlSetState($hCustomCacheDir, $GUI_CHECKED)
+	GUICtrlCreateLabel("缓存位置：", 20, 90, 100, 20)
 	Opt("ExpandEnvStrings", 0)
-	$hCacheDir = GUICtrlCreateEdit(StringReplace($CacheDir, "*", ""), 150, 90, 270, 20, $ES_AUTOHSCROLL)
-	GUICtrlSetTip(-1, "浏览器缓存位置" & @CRLF & "空白 = MyChrome 所在目录\Cache" & @CRLF & "支持环境变量，如 %TEMP%\ChromeCache")
+	$hCacheDir = GUICtrlCreateEdit($CacheDir, 120, 86, 300, 20, $ES_AUTOHSCROLL)
+	GUICtrlSetTip(-1, "浏览器缓存位置" & @CRLF & "空白 = 默认路径" & @CRLF & "支持%TEMP%等环境变量")
 	Opt("ExpandEnvStrings", 1)
-	$hSelectCacheDir = GUICtrlCreateButton("浏览", 430, 90, 50, 20)
+	$hSelectCacheDir = GUICtrlCreateButton("浏览", 430, 86, 50, 20)
 	GUICtrlSetTip(-1, "选择缓存位置")
 	GUICtrlSetOnEvent(-1, "SelectCacheDir")
-	$hCustomCacheSize = GUICtrlCreateCheckbox("缓存大小：", 30, 120, 80, 20)
-	GUICtrlSetOnEvent(-1, "ToggleCacheSize")
-	If $CacheSize <> 0 Then GUICtrlSetState($hCustomCacheSize, $GUI_CHECKED)
-	$hCacheSize = GUICtrlCreateEdit(Round($CacheSize / 1024 / 1024), 150, 120, 70, 20, $ES_AUTOHSCROLL)
-	GUICtrlSetTip(-1, "缓存大小（ 1 MB = 1024 KB ）" & @CRLF & "0 = 大小不限")
-	GUICtrlCreateLabel(" MB", 220, 125, 35, 20)
+	GUICtrlCreateLabel("缓存大小：", 20, 120, 100, 20)
+	$hCacheSize = GUICtrlCreateEdit(Round($CacheSize / 1024 / 1024), 120, 116, 80, 20, $ES_AUTOHSCROLL)
+	GUICtrlSetTip(-1, "缓存大小（ 1 MB = 1024 KB ）" & @CRLF & "0 = 无限制")
+	GUICtrlCreateLabel(" MB", 200, 120, 40, 20)
 
 	; 启动参数
 	GUICtrlCreateLabel("Google Chrome 启动参数", 20, 170)
 	Opt("ExpandEnvStrings", 0)
 	Local $lparams = StringReplace($Params, " --", Chr(13) & Chr(10) & "--") ; 空格换成换行符，便于显示
 	$hparams = GUICtrlCreateEdit($lparams, 20, 190, 400, 60, BitOR($ES_WANTRETURN, $WS_VSCROLL, $ES_AUTOVSCROLL))
+	GUICtrlSetTip(-1, "Chrome 启动参数，每行写一个参数。" & @CRLF & "支持%TEMP%等环境变量，" & @CRLF & "特别地，%APP%代表 MyChrome 所在目录。")
 	Opt("ExpandEnvStrings", 1)
-	GUICtrlSetTip(-1, "Google Chrome 浏览器启动参数" & @CRLF & "多个参数之间用空格隔开，" & @CRLF & "也可每行写一个参数。")
 
 	; 线程数
 	GUICtrlCreateLabel("下载线程数(1-10)：", 20, 270, 130, 20)
 	$hDownloadThreads = GUICtrlCreateInput($DownloadThreads, 150, 266, 60, 20, $ES_NUMBER)
-	GUICtrlSetTip(-1, "增减线程数可调节下载速度")
+	GUICtrlSetTip(-1, "增减线程数可调节下载速度" & @CRLF & "仅适用于下载 chrome 更新")
 	GUICtrlSetOnEvent(-1, "ThreadsLimit")
 	GUICtrlCreateUpdown($hDownloadThreads)
 	GUICtrlSetLimit(-1, 10, 1)
@@ -592,12 +693,12 @@ Func Settings()
 	GUICtrlSetOnEvent(-1, "SetProxy")
 	$hProxySever = GUICtrlCreateCombo($ProxySever, 150, 296, 110, 20)
 	GUICtrlSetData(-1, "127.0.0.1")
-	GUICtrlSetTip(-1, "代理服务器IP地址")
+	GUICtrlSetTip(-1, "代理服务器IP地址" & @CRLF & "仅适用于下载 chrome 更新")
 	GUICtrlCreateLabel("端口：", 290, 300, 80, 20)
 	$hProxyPort = GUICtrlCreateCombo($ProxyPort, 370, 296, 80, 20)
 	GUICtrlSetData(-1, "8087")
-	GUICtrlSetTip(-1, "代理服务器端口")
-	If $EnableProxy = 1 Then
+	GUICtrlSetTip(-1, "代理服务器端口" & @CRLF & "仅适用于下载 chrome 更新")
+	If $EnableProxy Then
 		GUICtrlSetState($hEnableProxy, $GUI_CHECKED)
 	Else
 		GUICtrlSetState($hProxySever, $GUI_DISABLE)
@@ -606,31 +707,44 @@ Func Settings()
 	SetProxy()
 
 	; 外部程序
-	GUICtrlCreateLabel("启动外部程序：", 20, 330, 100, 20)
+	GUICtrlCreateGroup("外部程序", 10, 330, 480, 130)
+	GUICtrlCreateLabel("启动时运行：", 20, 360, 100, 20)
 	Opt("ExpandEnvStrings", 0)
-	$hExtAppPath = GUICtrlCreateEdit($ExtAppPath, 120, 326, 190, 20, $ES_AUTOHSCROLL)
-	Opt("ExpandEnvStrings", 1)
-	GUICtrlSetTip(-1, "与浏览器一起启动的外部程序")
-	GUICtrlCreateButton("浏览", 320, 326, 30, 20)
+	$hExtAppPath = GUICtrlCreateEdit($ExtAppPath, 120, 356, 190, 20, $ES_AUTOHSCROLL)
+	GUICtrlSetTip(-1, "浏览器启动时需运行的外部程序")
+	GUICtrlCreateButton("浏览", 320, 356, 30, 20)
 	GUICtrlSetTip(-1, "选择外部程序")
 	GUICtrlSetOnEvent(-1, "GetExtAppPath")
-	GUICtrlCreateLabel("参数：", 370, 330, 40, 20)
-	$hExtAppParam = GUICtrlCreateEdit($ExtAppParam, 410, 326, 70, 20, $ES_AUTOHSCROLL)
+	GUICtrlCreateLabel("参数：", 370, 360, 40, 20)
+	$hExtAppParam = GUICtrlCreateEdit($ExtAppParam, 410, 356, 70, 20, $ES_AUTOHSCROLL)
+	GUICtrlSetTip(-1, "外部程序启动参数")
+	$hExtAppAutoExit = GUICtrlCreateCheckbox("#浏览器退出后自动关闭以上外部程序", 30, 386, 440, 20)
+	If $ExtAppAutoExit = 1 Then
+		GUICtrlSetState($hExtAppAutoExit, $GUI_CHECKED)
+	EndIf
+	GUICtrlCreateLabel("#退出后运行：", 20, 420, 100, 20)
+	$hExtAppPath2 = GUICtrlCreateEdit($ExtAppPath2, 120, 416, 190, 20, $ES_AUTOHSCROLL)
+	GUICtrlSetTip(-1, "浏览器退出后需运行的外部程序" & @CRLF & "支持批处理、vbs文件等")
+	GUICtrlCreateButton("浏览", 320, 416, 30, 20)
+	GUICtrlSetTip(-1, "选择外部程序")
+	GUICtrlSetOnEvent(-1, "GetExtAppPath2")
+	GUICtrlCreateLabel("参数：", 370, 420, 40, 20)
+	$hExtAppParam2 = GUICtrlCreateEdit($ExtAppParam2, 410, 416, 70, 20, $ES_AUTOHSCROLL)
 	GUICtrlSetTip(-1, "外部程序启动参数")
 
-
 	GUICtrlCreateTabItem("")
-	$hSettingsOK = GUICtrlCreateButton("确定", 260, 380, 70, 20)
+	$hSettingsOK = GUICtrlCreateButton("确定", 260, 470, 70, 20)
 	GUICtrlSetTip(-1, "应用设置并启动浏览器")
 	GUICtrlSetOnEvent(-1, "SettingsOK")
 	GUICtrlSetState(-1, $GUI_FOCUS)
-	GUICtrlCreateButton("取消", 340, 380, 70, 20)
+	GUICtrlCreateButton("取消", 340, 470, 70, 20)
 	GUICtrlSetTip(-1, "取消")
 	GUICtrlSetOnEvent(-1, "ExitApp")
-	$hSettingsApply = GUICtrlCreateButton("应用", 420, 380, 70, 20)
+	$hSettingsApply = GUICtrlCreateButton("应用", 420, 470, 70, 20)
 	GUICtrlSetTip(-1, "应用")
 	GUICtrlSetOnEvent(-1, "SettingsApply")
 	$hStausbar = _GUICtrlStatusBar_Create($hSettingsGUI, -1, '双击软件目录下的 "' & $AppName & '设置.vbs" 文件可调出此窗口')
+	Opt("ExpandEnvStrings", 1)
 
 	Local $WinVer = WinVer()
 	Global $LOCALAPPDATA
@@ -655,8 +769,6 @@ Func Settings()
 		GUICtrlSetState($hCopyData, $GUI_CHECKED)
 	EndIf
 
-	ToggleCacheDir()
-	ToggleCacheSize()
 	GUISetState(@SW_SHOW)
 	AdlibRegister("ShowLatestChromeVer", 10) ; Channel 对应的 Chrome 程序文件及对应的最新版本号
 
@@ -664,6 +776,20 @@ Func Settings()
 		Sleep(100)
 	WEnd
 EndFunc   ;==>Settings
+
+
+Func RunInBackground()
+	If GUICtrlRead($hRunInBackground) = $GUI_CHECKED Then
+		Return
+	EndIf
+	$msg = MsgBox(36+256, "MyChrome", '允许 MyChrome 在后台运行可以带来更好的用户体验。若取消此选项，请注意以下几点：' & @CRLF & @CRLF & _
+		'1. 将浏览器锁定到任务栏或设为默认浏览器后，需再运行一次 MyChrome 才能生效；' & @CRLF & _
+		'2. MyChrome 设置界面中带“#”符号的功能/选项将不会执行，包括浏览器退出后关闭外部程序、运行外部程序等。' & @CRLF & @CRLF & _
+		'确定要取消此选项吗？', 0, $hSettingsGUI)
+	If $msg <> 6 Then
+		GUICtrlSetState($hRunInBackground, $GUI_CHECKED)
+	EndIf
+EndFunc
 
 ;~ chrome.exe路径
 Func GetChromePath()
@@ -692,13 +818,21 @@ EndFunc   ;==>GetChromePath
 
 Func GetExtAppPath()
 	Local $path
-	$path = FileOpenDialog("选择与浏览器一起启动的外部程序", @ScriptDir, _
+	$path = FileOpenDialog("选择浏览器启动时需运行的外部程序", @ScriptDir, _
 			"可执行文件 (*.exe)|任意文件 (*.*)", 1 + 2, "", $hSettingsGUI)
 	If $path = "" Then Return
-	$ExtAppPath = RelativePath($path) ; 绝对路径转成相对路径（如果可以）
+	$ExtAppPath = RelativePath($path)
 	GUICtrlSetData($hExtAppPath, $ExtAppPath)
 EndFunc   ;==>GetExtAppPath
 
+Func GetExtAppPath2()
+	Local $path
+	$path = FileOpenDialog("选择浏览器退出后需运行的外部程序", @ScriptDir, _
+			"可执行文件 (*.exe)|任意文件 (*.*)", 1 + 2, "", $hSettingsGUI)
+	If $path = "" Then Return
+	$ExtAppPath2 = RelativePath($path)
+	GUICtrlSetData($hExtAppPath2, $ExtAppPath2)
+EndFunc   ;==>GetExtAppPath
 
 ; 指定用户数据文件夹
 Func GetUserDataDir()
@@ -746,11 +880,7 @@ Func SettingsOK()
 	If @error Then Return
 	If $IsUpdating Then Return ; 若正在更新则返回
 	; 重启程序
-	If @Compiled Then
-		Run('"' & @AutoItExe & '"')
-	Else
-		Run('"' & @AutoItExe & '" "' & @ScriptFullPath & '"')
-	EndIf
+	RestartAPP()
 	Exit
 EndFunc   ;==>SettingsOK
 
@@ -759,18 +889,25 @@ Func SettingsApply()
 	Local $msg
 	Opt("ExpandEnvStrings", 0)
 	$ChromePath = GUICtrlRead($hChromePath)
-	$CheckingInterval = GUICtrlRead($hCheckingInterval)
-	Switch $CheckingInterval
+	$UpdateInterval = GUICtrlRead($hUpdateInterval)
+	Switch $UpdateInterval
 		Case "从不"
-			$CheckingInterval = -1
+			$UpdateInterval = -1
 		Case "每周"
-			$CheckingInterval = 7
+			$UpdateInterval = 168
 		Case "每天"
-			$CheckingInterval = 1
+			$UpdateInterval = 24
+		Case "每小时"
+			$UpdateInterval = 1
 		Case Else
-			$CheckingInterval = 0
+			$UpdateInterval = 0
 	EndSwitch
 	$Channel = GUICtrlRead($hChannel)
+	If GUICtrlRead($hRunInBackground) = $GUI_CHECKED Then
+		$RunInBackground = 1
+	Else
+		$RunInBackground = 0
+	EndIf
 	$UserDataDir = GUICtrlRead($hUserDataDir)
 	Local $CopyData = GUICtrlRead($hCopyData)
 	Local $sAutoUpdateApp = GUICtrlRead($hAutoUpdateApp)
@@ -793,10 +930,18 @@ Func SettingsApply()
 
 	$ExtAppPath = RelativePath(GUICtrlRead($hExtAppPath))
 	$ExtAppParam = GUICtrlRead($hExtAppParam)
+	If GUICtrlRead($hExtAppAutoExit) = $GUI_CHECKED Then
+		$ExtAppAutoExit = 1
+	Else
+		$ExtAppAutoExit = 0
+	EndIf
+	$ExtAppPath2 = RelativePath(GUICtrlRead($hExtAppPath2))
+	$ExtAppParam2 = GUICtrlRead($hExtAppParam2)
 
 	SetProxy()
 	$DownloadThreads = GUICtrlRead($hDownloadThreads)
 	IniWrite($inifile, "Settings", "AskBeforeUpdateChrome", $AskBeforeUpdateChrome)
+	IniWrite($inifile, "Settings", "RunInBackground", $RunInBackground)
 	IniWrite($inifile, "Settings", "AutoUpdateApp", $AutoUpdateApp)
 	IniWrite($inifile, "Settings", "EnableUpdateProxy", $EnableProxy)
 	IniWrite($inifile, "Settings", "UpdateProxy", $ProxySever)
@@ -804,6 +949,9 @@ Func SettingsApply()
 	IniWrite($inifile, "Settings", "DownloadThreads", $DownloadThreads)
 	IniWrite($inifile, "Settings", "ExtAppPath", $ExtAppPath)
 	IniWrite($inifile, "Settings", "ExtAppParam", $ExtAppParam)
+	IniWrite($inifile, "Settings", "ExtAppAutoExit", $ExtAppAutoExit)
+	IniWrite($inifile, "Settings", "ExtAppPath2", $ExtAppPath2)
+	IniWrite($inifile, "Settings", "ExtAppParam2", $ExtAppParam2)
 
 	$ChromePath = AbsolutePath($ChromePath)
 	SplitPath($ChromePath, $ChromeDir, $ChromeExe)
@@ -846,32 +994,31 @@ Func SettingsApply()
 			EndIf
 		EndIf
 
-		Local $path = UserDataInUse($UserDataDir)
-		If $path Then WaitChromeClose($path, "用户数据文件正在使用无法复制，请关闭 Google Chrome 后继续！")
-
-		_GUICtrlStatusBar_SetText($hStausbar, "复制 Google Chrome 用户数据文件...")
-		DirCopy($DefaultUserDataDir, $UserDataDir, 1) ; 复制原版数据文件
-		_GUICtrlStatusBar_SetText($hStausbar, '双击软件目录下的 "' & $AppName & '设置.vbs" 文件可调出此窗口')
+		Local $lockfile = $UserDataDir & "\lockfile"
+		While 1
+			If FileExists($lockfile) And FileDelete($lockfile) = 0 Then
+				$msg = MsgBox(17, "MyChrome", "用户数据文件正在被浏览器使用，无法完成复制。" & @CRLF & "请关闭 Chrome 浏览器后继续！")
+				If $msg <> 1 Then ExitLoop
+			Else
+				_GUICtrlStatusBar_SetText($hStausbar, "复制 Google Chrome 用户数据文件...")
+				DirCopy($DefaultUserDataDir, $UserDataDir, 1) ; 复制原版数据文件
+				_GUICtrlStatusBar_SetText($hStausbar, '双击软件目录下的 "' & $AppName & '设置.vbs" 文件可调出此窗口')
+			EndIf
+		WEnd
 		GUICtrlSetState($hCopyData, $GUI_UNCHECKED)
 	EndIf
 
 	Opt("ExpandEnvStrings", 0)
 	$UserDataDir = RelativePath($UserDataDir)
-	If GUICtrlRead($hCustomCacheDir) = $GUI_CHECKED Then
-		$CacheDir = RelativePath(GUICtrlRead($hCacheDir))
-	Else
-		$CacheDir = "*"
+	$CacheDir = GUICtrlRead($hCacheDir)
+	If $CacheDir <> "" Then
+		$CacheDir = RelativePath($CacheDir)
 	EndIf
-
-	If GUICtrlRead($hCustomCacheSize) = $GUI_CHECKED Then
-		$CacheSize = GUICtrlRead($hCacheSize) * 1024 * 1024
-	Else
-		$CacheSize = 0
-	EndIf
+	$CacheSize = GUICtrlRead($hCacheSize) * 1024 * 1024
 
 	IniWrite($inifile, "Settings", "UserDataDir", $UserDataDir)
 	IniWrite($inifile, "Settings", "Params", $Params)
-	IniWrite($inifile, "Settings", "CheckingInterval", $CheckingInterval)
+	IniWrite($inifile, "Settings", "UpdateInterval", $UpdateInterval)
 	IniWrite($inifile, "Settings", "Channel", $Channel)
 	IniWrite($inifile, "Settings", "CacheDir", $CacheDir)
 	IniWrite($inifile, "Settings", "CacheSize", $CacheSize)
@@ -888,6 +1035,11 @@ EndFunc   ;==>SettingsApply
 ;~ 检查系统中是否有 Channel 对应的 chrome 程序文件及对应最新版本号
 Func CheckChrome()
 	Global $Channel = GUICtrlRead($hChannel)
+	If $Channel = "Chromium-Continuous-x64" Then
+		If @OSArch <> "X64" Then
+			MsgBox(64, "MyChrome", "Chromium-Continuous-x64 为 Chromium 的64位版本，只能在 Windows x64 环境下运行，在当前系统中可能无法使用。")
+		EndIf
+	EndIf
 	CheckChromeInSystem($Channel)
 	If $IsUpdating Then Return
 	If ProcessExists($iThreadPid) Then
@@ -997,7 +1149,7 @@ Func GetChrome()
 		If CheckChromeInSystem($Channel) Then
 			CopyChromeFromSystem()
 		Else
-			MsgBox(64, "MyChrome", "在您的系统中未发现 Google Chrome（" & $Channel & "）程序文件!", 0, $hSettingsGUI)
+			MsgBox(64, "MyChrome", "在您的系统中未找到 Google Chrome（" & $Channel & "）程序文件!", 0, $hSettingsGUI)
 		EndIf
 		_GUICtrlComboBox_SelectString($hChromeSource, "----  请选择  ----")
 	ElseIf $source = "从离线安装文件提取" Then
@@ -1055,26 +1207,6 @@ Func SetProxy()
 	EndIf
 EndFunc   ;==>SetProxy
 
-;~ 缓存目录
-Func ToggleCacheDir()
-	If GUICtrlRead($hCustomCacheDir) = $GUI_CHECKED Then
-		GUICtrlSetState($hCacheDir, $GUI_ENABLE)
-		GUICtrlSetState($hSelectCacheDir, $GUI_ENABLE)
-	Else
-		GUICtrlSetState($hCacheDir, $GUI_DISABLE)
-		GUICtrlSetState($hSelectCacheDir, $GUI_DISABLE)
-	EndIf
-EndFunc   ;==>ToggleCacheDir
-
-;~ 缓存大小
-Func ToggleCacheSize()
-	If GUICtrlRead($hCustomCacheSize) = $GUI_CHECKED Then
-		GUICtrlSetState($hCacheSize, $GUI_ENABLE)
-	Else
-		GUICtrlSetState($hCacheSize, $GUI_DISABLE)
-	EndIf
-EndFunc   ;==>ToggleCacheSize
-
 ;~ 选择缓存目录
 Func SelectCacheDir()
 	Local $sCacheDir = FileSelectFolder("选择一个文件夹用来保存浏览器缓存文件", "", 1 + 4, _
@@ -1086,11 +1218,7 @@ Func SelectCacheDir()
 EndFunc   ;==>SelectCacheDir
 
 Func ShowSettings()
-	If @Compiled Then
-		Run('"' & @AutoItExe & '" -set')
-	Else
-		Run('"' & @AutoItExe & '" "' & @ScriptFullPath & '" -set')
-	EndIf
+	RestartAPP("-set")
 EndFunc   ;==>ShowSettings
 
 ;~ 更新google chrome
@@ -1175,7 +1303,8 @@ Func UpdateChrome($ChromePath, $Channel)
 		Return
 	EndIf
 
-	IniWrite($inifile, "Settings", "LastCheckUpdate", _NowCalcDate())
+	$LastCheckUpdate = _NowCalc()
+	IniWrite($inifile, "Settings", "LastCheckUpdate", $LastCheckUpdate)
 	$ChromeFileVersion = FileGetVersion($ChromeDir & "\chrome.dll", "FileVersion")
 	$ChromeLastChange = FileGetVersion($ChromeDir & "\chrome.dll", "LastChange")
 	If $LatestChromeVer = $ChromeLastChange Or $LatestChromeVer = $ChromeFileVersion Then
@@ -1302,6 +1431,8 @@ Func GetLatestVersion($Channel, $ProxySever = "", $ProxyPort = "")
 		EndIf
 		If $Channel = "Chromium-Continuous" Then
 			$urlbase = "http://commondatastorage.googleapis.com/chromium-browser-continuous/Win/"
+		ElseIf $Channel = "Chromium-Continuous-x64" Then
+			$urlbase = "http://commondatastorage.googleapis.com/chromium-browser-continuous/Win_x64/"
 		Else
 			$urlbase = "http://commondatastorage.googleapis.com/chromium-browser-snapshots/Win/"
 		EndIf
@@ -1856,29 +1987,6 @@ Func ExitApp()
 	Exit
 EndFunc   ;==>ExitApp
 
-;~ 绝对路径转成相对路径（如果可以）
-Func RelativePath($path)
-	If StringLeft($path, 1) <> "%" Then
-		If StringInStr($path, @ScriptDir) = 1 Then
-			$path = StringReplace($path, @ScriptDir, "", 1)
-			If StringLeft($path, 1) = "\" Then $path = StringTrimLeft($path, 1)
-		EndIf
-	EndIf
-	If StringRight($path, 1) = "\" Then $path = StringTrimRight($path, 1)
-	Return $path
-EndFunc   ;==>RelativePath
-
-;~ 相对路径转换成绝对路径
-Func AbsolutePath($path)
-	If StringRight($path, 1) = "\" Then $path = StringTrimRight($path, 1)
-	If StringLeft($path, 1) <> "%" Then ; relative path
-		If Not StringInStr($path, ":") And StringLeft($path, 2) <> "\\" Then
-			$path = @ScriptDir & "\" & $path
-		EndIf
-	EndIf
-	Return $path
-EndFunc   ;==>AbsolutePath
-
 
 ; #FUNCTION# ;===============================================================================
 ; Name...........: SplitPath
@@ -1894,7 +2002,7 @@ EndFunc   ;==>AbsolutePath
 Func SplitPath($path, ByRef $dir, ByRef $file)
 	Local $pos = StringInStr($path, "\", 0, -1)
 	If $pos = 0 Then
-		$dir = ""
+		$dir = "."
 		$file = $path
 	Else
 		$dir = StringLeft($path, $pos - 1)
@@ -1902,6 +2010,55 @@ Func SplitPath($path, ByRef $dir, ByRef $file)
 	EndIf
 EndFunc   ;==>SplitPath
 
+;~ 绝对路径转成相对于脚本目录的相对路径，
+;~ 如 .\dir1\dir2 或 ..\dir2
+Func RelativePath($path)
+	If StringLeft($path, 1) = "%" Then Return $path
+	If Not StringInStr($path, ":") And StringLeft($path, 2) <> "\\" Then Return $path
+	If StringLeft(@ScriptDir, 3) <> StringLeft($path, 3) Then Return $path ; different driver
+	If StringRight($path, 1) <> "\" Then $path &= "\"
+	Local $r = '.\'
+	Local $pos, $dir = @ScriptDir & "\"
+	While 1
+		$path = StringReplace($path, $dir, $r)
+		If @extended Then ExitLoop
+		$pos = StringInStr($dir, "\", 0, -2)
+		If $pos = 0 Then ExitLoop
+		$dir = StringLeft($dir, $pos)
+		If StringLeft($r, 2) = '.\' Then
+			$r = '..\'
+		Else
+			$r = '..\' & $r
+		EndIf
+	WEnd
+	If StringRight($path, 1) = "\" Then $path = StringTrimRight($path, 1)
+	Return $path
+EndFunc   ;==>RelativePath
+
+;~ 相对于脚本目录的相对路径转换成绝对路径，输出结果结尾没有 “\”。
+Func AbsolutePath($path)
+	If StringLeft($path, 1) = "%" Then Return $path
+	If StringInStr($path, ":") Or StringLeft($path, 2) = "\\" Then Return $path
+	If StringRight($path, 1) <> "\" Then $path &= "\"
+	Local $dir = @ScriptDir
+	If StringLeft($path, 2) = ".\" Then
+		$path = StringReplace($path, '.', $dir, 1)
+	ElseIf StringLeft($path, 3) <> "..\" Then
+		$path = $dir & "\" & $path
+	Else
+		Local $i, $n, $pos
+		$path = StringReplace($path, "..\", "")
+		$n = @extended
+		For $i = 1 To $n
+			$pos = StringInStr($dir, "\", 0, -1)
+			If $pos = 0 Then ExitLoop
+			$dir = StringLeft($dir, $pos - 1)
+		Next
+		$path = $dir & "\" & $path
+	EndIf
+	If StringRight($path, 1) = "\" Then $path = StringTrimRight($path, 1)
+	Return $path
+EndFunc   ;==>AbsolutePath
 
 ;~ 判断是否有另一个 MyChrome 进程正在更新当前的 chrome
 ;~ 本程序是否正在更新 chrome 由 $IsUpdating 判断
@@ -1915,28 +2072,6 @@ Func ChromeIsUpdating($dir)
 		Return 1
 	EndIf
 EndFunc   ;==>ChromeIsUpdating
-
-;~ 判断数据文件夹是否正在使用中，返回使用数据文件夹的 chrome.exe 的完整路径
-;~ 参考: http://www.autoitscript.com/forum/topic/70538-processlistproperties/
-Func UserDataInUse($DataDir)
-	Local $file = $DataDir & "\Default\Current Session"
-	If Not FileExists($file) Or FileMove($file, $file, 1) Then Return "" ; 不在使用中
-
-	Local $path = "chrome.exe"
-	Local $objWMIService = ObjGet("winmgmts:\\localhost\root\CIMV2")
-	If @error Then Return SetError(-1, 0, "")
-	Local $colItems = $objWMIService.ExecQuery("SELECT * FROM Win32_Process")
-	If Not IsObj($colItems) Then Return SetError(-2, 0, "")
-	For $objItem In $colItems
-		If $objItem.CommandLine = '' Or StringLeft($objItem.CommandLine, 1) = '\' Then ContinueLoop
-
-		If StringInStr($objItem.CommandLine, $DataDir) Then
-			$path = $objItem.ExecutablePath
-			ExitLoop
-		EndIf
-	Next
-	Return $path
-EndFunc   ;==>UserDataInUse
 
 
 ;~ 等待 chrome 浏览器关闭
@@ -2189,3 +2324,30 @@ Func TrayTipExists($TrayText, $MatchMode = 0)
 		EndIf
 	Next
 EndFunc   ;==>TrayTipExists
+
+;~ 函数。整理内存
+;~ http://www.autoitscript.com/forum/index.php?showtopic=13399&hl=GetCurrentProcessId&st=20
+; Original version : w_Outer
+; modified by Rajesh V R to include process ID
+Func ReduceMemory($ProcID = 0)
+	Local $ai_GetCurrentProcessId
+	If $ProcID = 0 Or ProcessExists($ProcID) = 0 Then ; No process id specified or process doesnt exist - use current process instead.
+		$ai_GetCurrentProcessId = DllCall('kernel32.dll', 'int', 'GetCurrentProcessId')
+		$ProcID = $ai_GetCurrentProcessId[0]
+	EndIf
+	Local $ai_Handle = DllCall("kernel32.dll", 'int', 'OpenProcess', 'int', 0x1f0fff, 'int', False, 'int', $ProcID)
+	Local $ai_Return = DllCall("psapi.dll", 'int', 'EmptyWorkingSet', 'long', $ai_Handle[0])
+	DllCall('kernel32.dll', 'int', 'CloseHandle', 'int', $ai_Handle[0])
+	Return $ai_Return[0]
+EndFunc   ;==>ReduceMemory
+
+
+Func RestartAPP($args = "")
+	Local $pid
+	If @Compiled Then
+		$pid = Run('"' & @AutoItExe & '" ' & $args)
+	Else
+		$pid = Run('"' & @AutoItExe & '" "' & @ScriptFullPath & '" ' & $args)
+	EndIf
+	Return SetError(@error, 0, $pid)
+EndFunc
