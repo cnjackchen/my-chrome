@@ -31,10 +31,12 @@ http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome文件结构.jp
  * 以上只是默认的 Google Chrome 便携版文件结构，事实上您可按自己的意愿随意设置。
 
 *6、浏览器自动更新*
- * 选择检查更新的频率和分支，MyChrome 会按您的设置检查浏览器更新。发现有新版Chrome / Chromium 浏览器时，默认会询问是否下载更新。经确认后，将会下载并提取新版浏览器程序文件到指定的“Chrome.exe 路径”。                              
+ * 选择检查更新的频率和分支，MyChrome 会按您的设置检查浏览器更新。发现有新版Chrome / Chromium 浏览器时，默认会询问是否下载更新。经确认后，将会下载并提取新版浏览器程序文件到指定的“Chrome.exe 路径”。  
+http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器.jpg                            
  * MyChrome 目前支持 Stable、Beta、Dev、Canary、Chromium-Continuous、Chromium-Snapshots 等分支的自动更新。从稳定性角度来说，Stable > Beta > Dev > Canary > Chromium-Continuous > Chromium-Snapshots，从更新频率来说正好相反。Stable 通常一两个月更新一次，而 Chromium-Snapshots 则可能一两个小时会更新一次。普通用户建议选择 Stable，喜欢折腾的可以选 Chromium 试试。 
  * 如果下载更新过程中出错，可能是网络问题（国内访问 google 经常出错并不奇怪），请稍后再试试。
  * 浏览器更新后，在“关于 Google Chrome 浏览器“界面中仍显示”不能访问更新服务器...“这样的信息，这是正常现象。因为便携版 Chrome 本身并不具备自动更新功能，它的自动更新依靠 MyChrome 来完成。
+http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器2.jpg 
                                   
 *7、设置默认浏览器*
  * 如果是 Win 7 以上系统，请以管理员身份运行 MyChrome 以启动 Chrome 浏览器。
