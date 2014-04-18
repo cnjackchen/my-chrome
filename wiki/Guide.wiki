@@ -27,7 +27,7 @@
  * （2）设置界面中有很多设置、选项，可完全不用修改（也可自行修改）。
  * （3）按“确定”，等下载、提取 Chrome 程序文件结束后，便携版即制作完成。以后双击 MyChrome.exe 即可启动 Chrome 便携版了。  
  * 默认情况下，便携版 Chrome 程序文件在.\ Google Chrome\Chrome 文件夹中，你的扩展、书签等数据文件都在.\ Google Chrome\User Data 中。将 Google Chrome 文件夹复制到任意位置或U盘均可运行，重装系统后不必重新配置。
-http://googledrive.com/host/0B21uwFpGQgjNWWgzV0dJVUI3YUU/MyChrome文件结构.jpg
+http://googledrive.com/host/0B21uwFpGQgjNWWgzV0dJVUI3YUU/MyChromeFolder.jpg
  * 以上只是默认的 Google Chrome 便携版文件结构，事实上您可按自己的意愿随意设置。
 
 *6、浏览器自动更新*
