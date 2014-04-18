@@ -1,7 +1,5 @@
 #summary 使用帮助
 
-https://my-chrome.googlecode.com/svn/wiki/MyChrome%20Settings.jpg
-
 === 使用帮助 ===
 
 *1、MyChrome 的安装、卸载*
