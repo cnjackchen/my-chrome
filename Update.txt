@@ -1,5 +1,5 @@
 2.9
-https://googledrive.com/host/0B21uwFpGQgjNWWgzV0dJVUI3YUU/MyChrome_v2.9.zip
+http://googledrive.com/host/0B21uwFpGQgjNWWgzV0dJVUI3YUU/MyChrome_v2.9.zip
 1）增加Chromium分支64位版本支持（Chromium-Continuous-x64）；
 2）所有路径支持Windows环境变量，特别地，%APP %代表MyChrome所在目录；
 3）#增加浏览器退出后运行外部程序等功能；
