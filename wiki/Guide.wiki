@@ -35,7 +35,7 @@
  * http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器.jpg                            
  * MyChrome 目前支持 Stable、Beta、Dev、Canary、Chromium-Continuous、Chromium-Snapshots 等分支的自动更新。从稳定性角度来说，Stable > Beta > Dev > Canary > Chromium-Continuous > Chromium-Snapshots，从更新频率来说正好相反。Stable 通常一两个月更新一次，而 Chromium-Snapshots 则可能一两个小时会更新一次。普通用户建议选择 Stable，喜欢折腾的可以选 Chromium 试试。 
  * 如果下载更新过程中出错，可能是网络问题（国内访问 google 经常出错并不奇怪），请稍后再试试。
- * 浏览器更新后，在“关于 Google Chrome 浏览器“界面中仍显示”不能访问更新服务器...“这样的信息，这是正常现象。因为便携版 Chrome 本身并不具备自动更新功能，它的自动更新依靠 MyChrome 来完成。
+ * 浏览器更新后，在“关于 Google Chrome”界面中仍显示类似“更新失败“这样的信息属正常现象。便携版 Chrome 更新依靠 MyChrome 来完成。
  * http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器2.png 
                                   
 *7、设置默认浏览器*
