@@ -1,7 +1,5 @@
 #summary 更新历史
 
-=== 最近更新 ====
-
 2014.03.22 v2.9
  * 1）增加Chromium分支64位版本支持（Chromium-Continuous-x64）；
  * 2）所有路径支持Windows环境变量，特别地，%APP%代表MyChrome所在目录；
