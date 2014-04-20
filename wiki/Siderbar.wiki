@@ -1,0 +1,4 @@
+#summary 目录
+
+ * [https://code.google.com/p/my-chrome/wiki/History 更新历史]
+ * [https://code.google.com/p/my-chrome/wiki/Guide 使用帮助]
