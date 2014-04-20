@@ -6,9 +6,6 @@
  * 1）稍后再试试；
  * 2）尝试通过代_理服务器更新；
  * 3）如果问题仍未解决请，请在这里留言或通过邮件反馈。
-<wiki:comment>
-This text will be removed from the rendered page.
-</wiki:comment>
 
 *2、Win7/Win8系统中，如何将便携版Chrome浏览器锁定到任务栏？*
  * 启动浏览器 --> 右键单击任务栏的浏览器图标，选择“将此程序锁定到任务栏” --> 重新运行MyChrome.exe 一次（若选中“MyChrome在后台运行直至浏览器关闭”，则不必重新运行）。
@@ -16,3 +13,7 @@ This text will be removed from the rendered page.
 
 *3、关于后台进程*
  * 如果在设置中选择“MyChrome在后台运行直至浏览器关闭”，会有一个MyChrome进程一直在后台运行，直到浏览器关闭后自动退出。若不选择该选项，MyChrome不会在后台运行，但有部分功能不会执行。
+
+<wiki:comment>
+This text will be removed from the rendered page.
+</wiki:comment>
