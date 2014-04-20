@@ -13,7 +13,3 @@
 
 *3、关于后台进程*
  * 如果在设置中选择“MyChrome在后台运行直至浏览器关闭”，会有一个MyChrome进程一直在后台运行，直到浏览器关闭后自动退出。若不选择该选项，MyChrome不会在后台运行，但有部分功能不会执行。
-
-<wiki:comment>
-This text will be removed from the rendered page.
-</wiki:comment>
