@@ -7,10 +7,10 @@
 *1、MyChrome 的安装、卸载*
  * MyChrome 不需要安装，可在任何位置运行，也可在U盘运行。MyChrome 不需要卸载，若不想使用直接删除即可， 不会在您的系统中留下任何垃圾。
  * 但是 Chrome 浏览器本身仍有可能会在系统中写入少量文件和注册表项，比如要设为默认浏览器，则必须将一些信息写入注册表。这些内容不会随着 MyChrome 或者 Google Chrome 程序的移除而消失，须手动清理或借助其它工具。
- * 如果您只是偶尔使用 Chrome 而不希望在系统留下痕迹，可以使用  http://portableapps.com 的引导器 Google Chrome Portable ，它会在后台运行，待浏览器退出后进行一些清理工作。但它不能设为默认浏览器，不能自动更新。
+ * 如果您只是偶尔使用 Chrome 而不希望在系统留下痕迹，可以使用  http://portableapps.com 的引导器[http://portableapps.com/apps/internet/google_chrome_portable Google Chrome Portable ]，它会在后台运行，待浏览器退出后进行一些清理工作。但它不能设为默认浏览器，不能自动更新。
 
 *2、如何调出 MyChrome 图形界面（设置窗口）*
- * MyChrome 只有在第一次运行或设置有错误时才会弹出设置窗口，正常情况下没有图形界面。若需要显示设置界面，可在 MyChrome.exe 同一目录下找到 “MyChrome设置.vbs” 文件，双击运行这个文件即可。
+ * MyChrome 正常情况下没有图形界面。只在第一次运行或设置有错误时才会弹出设置窗口。若需要显示设置界面，可在 MyChrome.exe 同一目录下找到 “MyChrome设置.vbs” 文件，双击运行这个文件即可。
 
 *3、获取 Google Chrome 浏览器程序文件*
  * MyChrome 预设 Chrome 浏览器程序路径为 .\Chrome\chrome.exe，也可以点击“浏览”选择其它位置。可通过以下方法获取 Chrome 浏览器：
@@ -40,10 +40,14 @@
  * 浏览器更新后，在“关于 Google Chrome”界面中仍显示类似“更新失败“这样的信息属正常现象。便携版 Chrome 更新依靠 MyChrome 来完成。
  * http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器2.png 
                                   
-*7、设置默认浏览器*
- * 如果是 Win 7 以上系统，请以管理员身份运行 MyChrome 以启动 Chrome 浏览器。
- * 可在浏览器的 “设置 > 默认浏览器” 中将 Google Chrome 设为默认浏览器。设置后退出浏览器，重启 MyChrome.exe后生效（若选中“MyChrome在后台运行直至浏览器关闭”，则不必重启）。设置默认浏览器时可能会请求管理员权限。
+*7、何设置默认浏览器*
+ * 在浏览器的 “设置 > 默认浏览器” 中将 Google Chrome 设为默认浏览器即可。若您取消了“MyChrome在后台运行直至浏览器关闭”选项，则需退出浏览器，重启 MyChrome.exe后生效。
  * 检查默认浏览器是否设置成功的方法：在“开始”菜单 > “运行” 中输入网址（如www.google.com），按“确定”后打开的浏览器即为当前默认浏览器，关于如何检验默认浏览器设置是否成功的方法参考 这里。
+
+ * 完整设置默认浏览器可能需要管理员权限：
+ * # Windows XP：需管理员权限
+ * # Windows Vista/7：需管理员权限。不仅如此，在设置了 UAC 的情况下，需右键单击 MyChrome 图标，选择“以管理员身份运行”以启动 Chrome 浏览器，然后按前述方法设置默认浏览器。
+ * # Windows 8：不需要管理员权限
 
 *8、自定义浏览器缓存*
  * Chrome 默认缓存在用户数据文件目录中，我们可在高级选项卡中自定义其位置和大小。配合 RamDisk 将浏览器缓存设在虚拟硬盘中，可以有效减少磁盘碎片，一定程度上加速浏览器速度。缓存路径支持环境变量，比如 "%TEMP%"。
