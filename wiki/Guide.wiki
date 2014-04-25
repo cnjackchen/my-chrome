@@ -4,7 +4,7 @@
 
 <wiki:toc max_depth="1" />
 
-*1、MyChrome 的安装、卸载*
+*1、 MyChrome 的安装、卸载*
  * MyChrome 不需要安装，可在任何位置运行，也可在U盘运行。MyChrome 不需要卸载，若不想使用直接删除即可， 不会在您的系统中留下任何垃圾。
  * 但是 Chrome 浏览器本身仍有可能会在系统中写入少量文件和注册表项，比如要设为默认浏览器，则必须将一些信息写入注册表。这些内容不会随着 MyChrome 或者 Google Chrome 程序的移除而消失，须手动清理或借助其它工具。
  * 如果您只是偶尔使用 Chrome 而不希望在系统留下痕迹，可以使用  http://portableapps.com 的引导器[http://portableapps.com/apps/internet/google_chrome_portable Google Chrome Portable ]，它会在后台运行，待浏览器退出后进行一些清理工作。但它不能设为默认浏览器，不能自动更新。
@@ -14,10 +14,10 @@
 
 *3、获取 Google Chrome 浏览器程序文件*
  * MyChrome 预设 Chrome 浏览器程序路径为 .\Chrome\chrome.exe，也可以点击“浏览”选择其它位置。可通过以下方法获取 Chrome 浏览器：
- * （1）如果您的系统中已安装有Chrome 浏览器原版：选择“从系统中提取”。
- * （2）如果您原来使用 Chrome 绿色版/免安装版：点击“exe”选择浏览器主程序文件（chrome.exe）。
- * （3）如果您有 Chrome 离线安装包：选择“从离线安装文件提取”并选择您的安装包（chrome_installer.exe），其中的程序文件将会被提取到指定的 Chrome 路径。
- * （4）如果您什么也没有：请选择“从网络下载”，然后选择您需的分支（默认情况下选择 "Stable" － 稳定版）。点击“立即更新”，将会启动更新程序，下载并解压 Chrome 浏览器最新版到指定的 “chrome.exe 路径”。
+  # 如果您的系统中已安装有Chrome 浏览器原版：选择“从系统中提取”。
+  # 如果您原来使用 Chrome 绿色版/免安装版：点击“exe”选择浏览器主程序文件（chrome.exe）。
+  # 如果您有 Chrome 离线安装包：选择“从离线安装文件提取”并选择您的安装包（chrome_installer.exe），其中的程序文件将会被提取到指定的 Chrome 路径。
+  # 如果您什么也没有：请选择“从网络下载”，然后选择您需的分支（默认情况下选择 "Stable" － 稳定版）。点击“立即更新”，将会启动更新程序，下载并解压 Chrome 浏览器最新版到指定的 “chrome.exe 路径”。
 
 *4、自定义 Google Chrome 浏览器数据文件夹的位置*
  * 选择一个文件夹作为 Chrome 数据文件夹，用来保存您的浏览器数据（书签、扩展等）。如果原来使用过 Chrome 原版/免安装版，在系统中存在浏览器数据文件，可以勾选"从系统中复制用户数据文件到以上文件夹中"，这样系统中的浏览器数据会被复制到指定 User Data 文件夹中。
@@ -25,9 +25,9 @@
 
 *5、用 MyChrome 自己制作Google Chrome 浏览器便携版*
  * 最”傻瓜“的制作方法：
- * （1）新建一个文件夹（下面以 D:\Program files\Google Chrome 文件夹为例），MyChrome 压缩包解压到这个文件夹中，双击运行 MyChrome.exe 显示设置窗口；
- * （2）设置界面中有很多设置、选项，可完全不用修改（也可自行修改）。
- * （3）按“确定”，等下载、提取 Chrome 程序文件结束后，便携版即制作完成。以后双击 MyChrome.exe 即可启动 Chrome 便携版了。  
+  # 新建一个文件夹（下面以 D:\Program files\Google Chrome 文件夹为例），MyChrome 压缩包解压到这个文件夹中，双击运行 MyChrome.exe 显示设置窗口；
+  # 设置界面中有很多设置、选项，可完全不用修改（也可自行修改）。
+  # 按“确定”，等下载、提取 Chrome 程序文件结束后，便携版即制作完成。以后双击 MyChrome.exe 即可启动 Chrome 便携版了。  
  * 默认情况下，便携版 Chrome 程序文件在.\ Google Chrome\Chrome 文件夹中，你的扩展、书签等数据文件都在.\ Google Chrome\User Data 中。将 Google Chrome 文件夹复制到任意位置或U盘均可运行，重装系统后不必重新配置。
  * http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome文件结构.png
  * 以上只是默认的 Google Chrome 便携版文件结构，事实上您可按自己的意愿随意设置。
@@ -43,11 +43,10 @@
 *7、何设置默认浏览器*
  * 在浏览器的 “设置 > 默认浏览器” 中将 Google Chrome 设为默认浏览器即可。若您取消了“MyChrome在后台运行直至浏览器关闭”选项，则需退出浏览器，重启 MyChrome.exe后生效。
  * 检查默认浏览器是否设置成功的方法：在“开始”菜单 > “运行” 中输入网址（如www.google.com），按“确定”后打开的浏览器即为当前默认浏览器，关于如何检验默认浏览器设置是否成功的方法参考 这里。
-
- * 完整设置默认浏览器可能需要管理员权限：
- * # Windows XP：需管理员权限
- * # Windows Vista/7：需管理员权限。不仅如此，在设置了 UAC 的情况下，需右键单击 MyChrome 图标，选择“以管理员身份运行”以启动 Chrome 浏览器，然后按前述方法设置默认浏览器。
- * # Windows 8：不需要管理员权限
+ * 完整设置默认浏览器可能需要*管理员权限*：
+  * Windows XP：需管理员权限
+  * Windows Vista/7：需管理员权限。不仅如此，在设置了 UAC 的情况下，需右键单击 MyChrome 图标，选择“以管理员身份运行”以启动浏览器，然后按前述方法设置默认浏览器。
+  * Windows 8：不需要管理员权限
 
 *8、自定义浏览器缓存*
  * Chrome 默认缓存在用户数据文件目录中，我们可在高级选项卡中自定义其位置和大小。配合 RamDisk 将浏览器缓存设在虚拟硬盘中，可以有效减少磁盘碎片，一定程度上加速浏览器速度。缓存路径支持环境变量，比如 "%TEMP%"。
