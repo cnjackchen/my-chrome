@@ -1,5 +1,5 @@
 2.9.1
-http://mychrome.985.so/MyChrome_v2.9.1.zip
+http://mychrome.985.so/MyChromeUpdate/MyChrome_v2.9.1.zip
 1）浏览器启动/退出时可运行任意类型的外部程序。关闭外部程序时，将会同时关闭由外部程序启动的下一级子进程。
 2）设置默认浏览器时不再显示对话框。
 3）进一步减少MyChrome后台运行占用的系统资源（CPU 0%，内存1MB左右）。
