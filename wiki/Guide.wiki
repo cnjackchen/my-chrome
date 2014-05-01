@@ -44,7 +44,7 @@
   * Canary-x86：金丝雀版（32位版）
   * Chromium-Continuous：人工打包、较稳定的Chromium
   * Chromium-Continuous-x64：人工打包、较稳定的Chromium（64位版）
-  * Chromium-Snapshots：自动打包的Chromium，可能有很多bug，极不稳定
+  * Chromium-Snapshots：自动打包的Chromium，可能有bug、不稳定
  * 如果下载更新过程中出错，可能是网络问题（国内访问 google 经常出错并不奇怪），请稍后再试试。
  * 浏览器更新后，在“关于 Google Chrome”界面中仍显示类似“更新失败“这样的信息属正常现象。便携版 Chrome 更新依靠 MyChrome 来完成。
  * http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器2.png 
