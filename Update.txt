@@ -1,6 +1,5 @@
-2.9.1
-http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.1.zip
-1）浏览器启动/退出时可运行任意类型的外部程序。关闭外部程序时，将会同时关闭由外部程序启动的下一级子进程。
-2）设置默认浏览器时不再显示对话框。
-3）进一步减少MyChrome后台运行占用的系统资源（CPU 0%，内存1MB左右）。
+2.9.2
+http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.2.zip
+1）修正对Canary 64位版本的支持。新增“Canary-x86”分支为32位版本，原“Canary”分支则根据您的系统构架由Google服务器确定32或64位版本。
+2）修正外部程序参数中带“|”符号会出错的问题，修正些其它小问题。
 
