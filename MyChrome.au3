@@ -3,7 +3,7 @@
 #AutoIt3Wrapper_Icon=Icon_1.ico
 #AutoIt3Wrapper_Res_Comment=http://code.google.com/p/my-chrome/
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=2.9.1.0
+#AutoIt3Wrapper_Res_Fileversion=2.9.2
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -36,12 +36,12 @@
 #include "SimpleMultiThreading.au3"
 
 Opt("TrayAutoPause", 0)
-Opt("TrayMenuMode", 1 + 2) ; Default tray menu items (Script Paused/Exit) will not be shown.
+Opt("TrayMenuMode", 3) ; Default tray menu items (Script Paused/Exit) will not be shown.
 Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "2.9.1" ; MyChrome version
+Global Const $AppVersion = "2.9.2" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
 Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome
@@ -135,9 +135,21 @@ $ExApp2 = IniRead($inifile, "Settings", "ExApp2", "")
 If $AppVersion <> IniRead($inifile, "Settings", "AppVersion", "") Then
 	$FirstRun = 1
 	IniWrite($inifile, "Settings", "AppVersion", $AppVersion)
-	If $CacheDir = "*" Then
-		$CacheDir = ""
-		IniWrite($inifile, "Settings", "CacheDir", "")
+	If StringInStr($ExApp, "|") Then
+		$ExApp = StringReplace($ExApp, "|", "||")
+		$var = $ExApp
+		If StringRegExp($var, '^".*"$') Then
+			$var = '"' & $var & '"'
+		EndIf
+		IniWrite($inifile, "Settings", "ExApp", $var)
+	EndIf
+	If StringInStr($ExApp2, "|") Then
+		$ExApp2 = StringReplace($ExApp2, "|", "||")
+		$var = $ExApp2
+		If StringRegExp($var, '^".*"$') Then
+			$var = '"' & $var & '"'
+		EndIf
+		IniWrite($inifile, "Settings", "ExApp2", $var)
 	EndIf
 EndIf
 #EndRegion ========= 兼容旧版 MyChrome =========
@@ -200,7 +212,7 @@ EndIf
 
 ; Start external apps
 If $ExApp <> "" Then
-	$aExApp = StringSplit($ExApp, "|")
+	$aExApp = StringSplit($ExApp, "||", 1)
 	ReDim $aExAppPID[$aExApp[0] + 1]
 	$aExAppPID[0] = $aExApp[0]
 	For $i = 1 To $aExApp[0]
@@ -228,20 +240,9 @@ If FileExists($TaskBarDir) Then
 	CheckPinnedPrograms()
 EndIf
 
-;~ Check mychrome update
-If $AutoUpdateApp <> 0 And _DateDiff("h", $LastCheckAppUpdate, _NowCalc()) >= 48 Then
-	CheckAppUpdate()
-EndIf
-
-; 检查google chrome更新
-If $UpdateInterval <> -1 Then
-	Local $var = _DateDiff("h", $LastCheckUpdate, _NowCalc())
-	If $var >= $UpdateInterval Then
-		UpdateChrome($ChromePath, $Channel)
-	EndIf
-EndIf
-
+Global $FirstUpdateCheck = 1
 If Not $RunInBackground Then
+	UpdateCheck()
 	Exit
 EndIf
 ; ========================= app ended if not run in background ================================
@@ -260,12 +261,8 @@ If $CheckDefaultBrowser Then ; register REG for notification
 		EndIf
 	Next
 EndIf
-
-
 OnAutoItExitRegister("OnExit")
-AdlibRegister("UpdateCheck", 300000)
-ReduceMemory()
-
+AdlibRegister("UpdateCheck", 10000)
 
 Local $hWnd
 WinWait("[REGEXPCLASS:(?i)Chrome]", "", 15)
@@ -276,6 +273,7 @@ For $i = 1 To $list[0][0]
 		ExitLoop
 	EndIf
 Next
+ReduceMemory()
 
 ; wait for chrome exit
 While 1
@@ -325,7 +323,7 @@ EndIf
 
 ; Start external apps
 If $ExApp2 <> "" Then
-	$aExApp2 = StringSplit($ExApp2, "|")
+	$aExApp2 = StringSplit($ExApp2, "||", 1)
 	For $i = 1 To $aExApp2[0]
 		$match = StringRegExp($aExApp2[$i], '^"(.*?)" *(.*)', 1)
 		If @error Then
@@ -369,15 +367,27 @@ Func UpdateCheck()
 	If $AutoUpdateApp <> 0 And _DateDiff("h", $LastCheckAppUpdate, _NowCalc()) >= 24 Then
 		CheckAppUpdate()
 	EndIf
-
 	; check chrome update
-	If $UpdateInterval > 0 Then
-		Local $var = _DateDiff("h", $LastCheckUpdate, _NowCalc())
-		If $var >= $UpdateInterval Then
-			UpdateChrome($ChromePath, $Channel)
+	If $UpdateInterval >= 0 Then
+		If $UpdateInterval = 0 Then
+			If $FirstUpdateCheck Then
+				UpdateChrome($ChromePath, $Channel)
+			EndIf
+		Else
+			Local $var = _DateDiff("h", $LastCheckUpdate, _NowCalc())
+			If $var >= $UpdateInterval Then
+				UpdateChrome($ChromePath, $Channel)
+			EndIf
 		EndIf
 	EndIf
-	ReduceMemory()
+
+	If $RunInBackground Then
+		If $FirstUpdateCheck Then
+			AdlibRegister("UpdateCheck", 300000)
+		EndIf
+		ReduceMemory()
+	EndIf
+	$FirstUpdateCheck = 0
 EndFunc   ;==>UpdateCheck
 
 ;~ for win7/vista or newer
@@ -403,6 +413,7 @@ Func CheckPinnedPrograms()
 			$TargetPath = $objShortcut.TargetPath
 			If $TargetPath = $ChromePath Then
 				$objShortcut.TargetPath = @ScriptFullPath
+				$objShortcut.IconLocation = $ChromePath & ",0"
 				$objShortcut.Save
 				$TaskBarLastChange = FileGetTime($TaskBarDir, 0, 1)
 				ExitLoop
@@ -553,9 +564,10 @@ Func CheckAppUpdate()
 	If Not FileExists($temp) Then DirCreate($temp)
 
 	TraySetState(1)
-	TraySetClick(8)
+	TraySetClick(0) ; Tray menu will never be shown through a mouseclick
 	TraySetToolTip("MyChrome")
-	TrayTip("MyChrome 更新", "正在下载 MyChrome 最新版...", 5, 1)
+	TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "")
+	TrayTip("MyChrome更新", "正在下载 MyChrome ...", 5, 1)
 
 	InetGet($url, $file, 19)
 	FileSetAttrib($file, "+A")
@@ -569,7 +581,7 @@ Func CheckAppUpdate()
 		FileDelete($temp & "\7z.dll")
 		FileDelete($file)
 		FileMove($temp & "\*.*", @ScriptDir & "\", 9)
-		MsgBox(64, "MyChrome", "MyChrome 已更新至 " & $LatestAppVer & " ！" & @CRLF & "原来的 MyChrome 已备份为 " & @ScriptName & ".bak。")
+		MsgBox(64, "MyChrome", "MyChrome 已更新至 " & $LatestAppVer & " ！" & @CRLF & "原 MyChrome 已备份为 " & @ScriptName & ".bak。")
 	Else
 		$msg = MsgBox(20, "MyChrome", "MyChrome 自动更新失败！" & @CRLF & @CRLF & "是否去软件发布页手动下载更新？")
 		If $msg = 6 Then ; Yes
@@ -627,7 +639,8 @@ Func Settings()
 
 	GUICtrlCreateLabel("分支：", 20, 174, 80, 20)
 	$hChannel = GUICtrlCreateCombo("", 100, 170, 150, 20, $CBS_DROPDOWNLIST)
-	GUICtrlSetData(-1, "Stable|Beta|Dev|Canary|Chromium-Continuous|Chromium-Continuous-x64|Chromium-Snapshots", $Channel)
+	GUICtrlSetData(-1, "Stable|Beta|Dev|Canary|Canary-x86|Chromium-Continuous|" & _
+			"Chromium-Continuous-x64|Chromium-Snapshots", $Channel)
 	GUICtrlSetTip(-1, "Stable - 稳定版(正式版)" & @CRLF & "Beta - 测试版" & @CRLF & "Dev - 开发版" & @CRLF & _
 			"Canary - 金丝雀版" & @CRLF & "Chromium - 更新快但不稳定")
 	GUICtrlSetOnEvent(-1, "CheckChrome")
@@ -745,7 +758,7 @@ Func Settings()
 	EndIf
 	$hExApp = GUICtrlCreateEdit("", 20, 100, 410, 50, BitOR($ES_WANTRETURN, $WS_VSCROLL, $ES_AUTOVSCROLL))
 	If $ExApp <> "" Then
-		GUICtrlSetData(-1, StringReplace($ExApp, "|", @CRLF) & @CRLF)
+		GUICtrlSetData(-1, StringReplace($ExApp, "||", @CRLF) & @CRLF)
 	EndIf
 	GUICtrlSetTip(-1, "浏览器启动时运行的外部程序，支持批处理、vbs文件等" & @CRLF & "如需启动参数，可添加在程序路径之后")
 	GUICtrlCreateButton("添加", 440, 100, 40, 20)
@@ -755,7 +768,7 @@ Func Settings()
 	GUICtrlCreateLabel("#浏览器退出后运行", 20, 180, -1, 20)
 	$hExApp2 = GUICtrlCreateEdit("", 20, 200, 410, 50, BitOR($ES_WANTRETURN, $WS_VSCROLL, $ES_AUTOVSCROLL))
 	If $ExApp2 <> "" Then
-		GUICtrlSetData(-1, StringReplace($ExApp2, "|", @CRLF) & @CRLF)
+		GUICtrlSetData(-1, StringReplace($ExApp2, "||", @CRLF) & @CRLF)
 	EndIf
 	GUICtrlSetTip(-1, "浏览器退出后运行的外部程序，支持批处理、vbs文件等" & @CRLF & "如需启动参数，可添加在程序路径之后")
 	GUICtrlCreateButton("添加", 440, 200, 40, 20)
@@ -799,13 +812,14 @@ Func Settings()
 		Sleep(100)
 	WEnd
 	GUIDelete($hSettings)
+	$hSettings = "" ; free the handle
 EndFunc   ;==>Settings
 
 
 Func AddExApp()
 	Local $path
 	$path = FileOpenDialog("选择浏览器启动时需运行的外部程序", @ScriptDir, _
-			"任意文件 (*.*)", 1 + 2, "", $hSettings)
+			"所有文件 (*.*)", 1 + 2, "", $hSettings)
 	If $path = "" Then Return
 	$path = RelativePath($path)
 	$ExApp = GUICtrlRead($hExApp) & '"' & $path & '"' & @CRLF
@@ -814,7 +828,7 @@ EndFunc   ;==>AddExApp
 Func AddExApp2()
 	Local $path
 	$path = FileOpenDialog("选择浏览器启动时需运行的外部程序", @ScriptDir, _
-			"任意文件 (*.*)", 1 + 2, "", $hSettings)
+			"所有文件 (*.*)", 1 + 2, "", $hSettings)
 	If $path = "" Then Return
 	$path = RelativePath($path)
 	$ExApp2 = GUICtrlRead($hExApp2) & '"' & $path & '"' & @CRLF
@@ -839,7 +853,7 @@ EndFunc   ;==>RunInBackground
 Func GetChromePath()
 	Local $sChromePath
 	$sChromePath = FileOpenDialog("选择 Chrome 浏览器主程序（chrome.exe）", @ScriptDir, _
-			"可执行文件(*.exe)", 2, "chrome.exe", $hSettings)
+			"可执行文件(*.exe)|所有文件(*.*)", 2, "chrome.exe", $hSettings)
 	If $sChromePath = "" Then Return
 	If FileExists($sChromePath) Then
 		_GUICtrlComboBox_SelectString($hChromeSource, "----  请选择  ----")
@@ -947,8 +961,8 @@ Func SettingsApply()
 
 	$var = GUICtrlRead($hExApp)
 	$var = StringStripWS($var, 3)
-	$var = StringReplace($var, @CRLF, "|")
-	$var = StringRegExpReplace($var, "\|+\s*\|+", "\|")
+	$var = StringReplace($var, @CRLF, "||")
+	$var = StringRegExpReplace($var, "\|+\s*\|+", "\|\|")
 	$ExApp = $var
 	If GUICtrlRead($hExAppAutoExit) = $GUI_CHECKED Then
 		$ExAppAutoExit = 1
@@ -957,8 +971,8 @@ Func SettingsApply()
 	EndIf
 	$var = GUICtrlRead($hExApp2)
 	$var = StringStripWS($var, 3)
-	$var = StringReplace($var, @CRLF, "|")
-	$var = StringRegExpReplace($var, "\|+\s*\|+", "\|")
+	$var = StringReplace($var, @CRLF, "||")
+	$var = StringRegExpReplace($var, "\|+\s*\|+", "\|\|")
 	$ExApp2 = $var
 
 	SetProxy()
@@ -977,11 +991,11 @@ Func SettingsApply()
 	IniWrite($inifile, "Settings", "UpdatePort", $ProxyPort)
 	IniWrite($inifile, "Settings", "DownloadThreads", $DownloadThreads)
 	$var = $ExApp
-	If StringLeft($var, 1) = '"' And StringRight($var, 1) = '"' Then $var = '"' & $var & '"'
+	If StringRegExp($var, '^".*"$') Then $var = '"' & $var & '"'
 	IniWrite($inifile, "Settings", "ExApp", $var)
 	IniWrite($inifile, "Settings", "ExAppAutoExit", $ExAppAutoExit)
 	$var = $ExApp2
-	If StringLeft($var, 1) = '"' And StringRight($var, 1) = '"' Then $var = '"' & $var & '"'
+	If StringRegExp($var, '^".*"$') Then $var = '"' & $var & '"'
 	IniWrite($inifile, "Settings", "ExApp2", $var)
 
 
@@ -1057,7 +1071,7 @@ Func CheckChromeInSystem($Channel)
 		$DefaultUserDataDir = @LocalAppDataDir & "\Chromium\User Data"
 		$dir = "Chromium\Application"
 		$Subkey = "Software\Chromium"
-	ElseIf $Channel = "Canary" Then
+	ElseIf StringInStr($Channel, "Canary") Then
 		$DefaultUserDataDir = @LocalAppDataDir & "\Google\Chrome SxS\User Data"
 		$dir = "Google\Chrome SxS\Application"
 		$Subkey = "Software\Google\Update\Clients\{4ea16ac7-fd5a-47c3-875b-dbf4a2008c20}"
@@ -1314,7 +1328,7 @@ Func UpdateChrome($ChromePath, $Channel)
 		Return
 	EndIf
 
-	Local $info = "Google Chrome (" & $Channel & ") 可以更新，是否立即下载浏览器的最新版本？" & @CRLF & @CRLF _
+	Local $info = "Google Chrome (" & $Channel & ") 可以更新，是否立即下载？" & @CRLF & @CRLF _
 			 & "最新版本：" & $LatestChromeVer & @CRLF _
 			 & "您的版本：" & $ChromeFileVersion & "  " & $ChromeLastChange
 	$msg = 6
@@ -1333,8 +1347,8 @@ Func UpdateChrome($ChromePath, $Channel)
 			TraySetClick(8)
 			TraySetToolTip("MyChrome")
 			TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "TrayTipProgress")
-			TrayCreateItem("退出 MyChrome...")
-			TrayItemSetOnEvent(-1, "ExitApp")
+			TrayCreateItem("取消更新 ...")
+			TrayItemSetOnEvent(-1, "CancelUpdate")
 			TrayTip("开始下载 Google Chrome", "点击图标可查看下载进度", 10, 1)
 		EndIf
 
@@ -1401,9 +1415,19 @@ Func UpdateChrome($ChromePath, $Channel)
 		WEnd
 	EndIf
 
+	If @TrayIconVisible Then
+		TraySetState(2)
+	EndIf
 	EndUpdate()
 	Return $updated
 EndFunc   ;==>UpdateChrome
+
+Func CancelUpdate()
+	Local $msg = MsgBox(292, "MyChrome", "浏览器正在更新，确定要取消吗？")
+	If $msg = 6 Then
+		$IsUpdating = 0
+	EndIf
+EndFunc   ;==>CancelUpdate
 
 #Region 获取 Chrome 最新版信息（最新版本号，下载地址）
 ;~ $aDlInfo[6]
@@ -1461,7 +1485,7 @@ Func GetLatestVersion($Channel, $ProxySever = "", $ProxyPort = "")
 	EndIf
 
 	; 利用 Google Update API 获取 stable/beta/dev/canary 最新版本号 http://code.google.com/p/omaha/wiki/ServerProtocol
-	Local $appid, $ap, $data, $match
+	Local $appid, $ap, $data, $match, $OSArch
 	_SetVar("DLInfo", "|||||正在连接服务器，获取 Google Chrome 最新版信息...")
 	Switch $Channel
 		Case "Stable"
@@ -1476,17 +1500,18 @@ Func GetLatestVersion($Channel, $ProxySever = "", $ProxyPort = "")
 		Case "Canary"
 			$appid = "4EA16AC7-FD5A-47C3-875B-DBF4A2008C20"
 			$ap = ""
+		Case "Canary-x86"
+			$appid = "4EA16AC7-FD5A-47C3-875B-DBF4A2008C20"
+			$ap = ""
+			$OSArch = "x86"
 	EndSwitch
-
-;~ 	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.21.123" ismachine="0" ' & _
-;~ 			'sessionid="{12345678-1234-1234-1234-123456789012}" installsource="ondemandcheckforupdate" ' & _
-;~ 			'requestid="{12345678-1234-1234-1234-123456789012}"><os platform="win" version="' & WinVer() & '" ' & _
-;~ 			'sp="' & @OSServicePack & '" arch="' & @OSArch & '"/><app appid="{' & $appid & '}" version="" nextversion="" ' & _
-;~ 			'ap="' & $ap & '" lang="" brand="GGLS" client=""><updatecheck/><ping active="1"/></app></request>'
+	If Not $OSArch Then
+		$OSArch = StringLower(@OSArch)
+	EndIf
 	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.23.9" shell_version="1.3.21.103" ismachine="0" ' & _
 			'sessionid="{3597644B-2952-4F92-AE55-D315F45F80A5}" installsource="ondemandcheckforupdate" ' & _
 			'requestid="{CD7523AD-A40D-49F4-AEEF-8C114B804658}" dedup="cr"><os platform="win" version="' & WinVer() & '" ' & _
-			'sp="' & @OSServicePack & '" arch="' & @OSArch & '"/><app appid="{' & $appid & '}" version="" nextversion="" ' & _
+			'sp="' & @OSServicePack & '" arch="' & $OSArch & '"/><app appid="{' & $appid & '}" version="" nextversion="" ' & _
 			'ap="' & $ap & '" lang="" brand="GGLS" client=""><updatecheck/><ping active="1" ad="2665" rd="2665"/></app></request>'
 
 	Local $hHTTPOpen, $hConnect, $version, $name, $a, $hRequest, $sHeader, $error
@@ -1877,13 +1902,10 @@ Func InstallChrome($ChromeInstaller = "")
 	If IsHWnd($hSettings) Then
 		_GUICtrlStatusBar_SetText($hStausbar, "正在提取 Google Chrome 程序文件...")
 	Else
-		If Not @TrayIconVisible Then
-			TraySetState(1)
-			TraySetClick(8)
-			TraySetToolTip("MyChrome")
-			TrayCreateItem("退出 MyChrome ...")
-			TrayItemSetOnEvent(-1, "ExitApp")
-		EndIf
+		TraySetState(1)
+		TraySetClick(0)
+		TraySetToolTip("MyChrome")
+		TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "")
 		TrayTip("Google Chrome 更新", "正在提取 Google Chrome 程序文件...", 5, 1)
 	EndIf
 
@@ -1985,7 +2007,7 @@ EndFunc   ;==>EndUpdate
 ; 退出前检查是否在更新
 Func ExitApp()
 	If $IsUpdating Then
-		Local $msg = MsgBox(292, "MyChrome", "正在更新浏览器，确定要退出吗？", 0, $hSettings)
+		Local $msg = MsgBox(292, "MyChrome", "浏览器正在更新，确定要取消更新并退出吗？", 0, $hSettings)
 		If $msg = 7 Then Return
 		EndUpdate()
 	ElseIf ProcessExists($iThreadPid) Then
@@ -1993,7 +2015,6 @@ Func ExitApp()
 	EndIf
 	Exit
 EndFunc   ;==>ExitApp
-
 
 ; #FUNCTION# ;===============================================================================
 ; Name...........: SplitPath
@@ -2447,3 +2468,4 @@ Func VersionCompare($v1, $v2)
 	Next
 	Return False
 EndFunc   ;==>VersionCompare
+
