@@ -36,6 +36,15 @@
  * 选择检查更新的频率和分支，MyChrome 会按您的设置检查浏览器更新。发现有新版Chrome / Chromium 浏览器时，默认会询问是否下载更新。经确认后，将会下载并提取新版浏览器程序文件到指定的“Chrome.exe 路径”。  
  * http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器.jpg                            
  * MyChrome 目前支持 Stable、Beta、Dev、Canary、Chromium-Continuous、Chromium-Snapshots 等分支的自动更新。从稳定性角度来说，Stable > Beta > Dev > Canary > Chromium-Continuous > Chromium-Snapshots，从更新频率来说正好相反。Stable 通常一两个月更新一次，而 Chromium-Snapshots 则可能一两个小时会更新一次。普通用户建议选择 Stable，喜欢折腾的可以选 Chromium 试试。 
+ * MyChrome 中各分支说明如下：
+  * Stable：稳定版、正式版
+  * Beta：测试版
+  * Dev：开发版
+  * Canary：金丝雀版，32位操作系统下为32位版本，64位系统下为64位版本
+  * Canary-x86：金丝雀版（32位）
+  * Chromium-Continuous：人工打包、较稳定的Chromium
+  * Chromium-Continuous-x64：人工打包、较稳定的Chromium（64位版）
+  * Chromium-Snapshots：自动打包的Chromium，可能有很多bug，极不稳定
  * 如果下载更新过程中出错，可能是网络问题（国内访问 google 经常出错并不奇怪），请稍后再试试。
  * 浏览器更新后，在“关于 Google Chrome”界面中仍显示类似“更新失败“这样的信息属正常现象。便携版 Chrome 更新依靠 MyChrome 来完成。
  * http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器2.png 
