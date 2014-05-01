@@ -40,8 +40,8 @@
   * Stable：稳定版、正式版
   * Beta：测试版
   * Dev：开发版
-  * Canary：金丝雀版，32位操作系统下为32位版本，64位系统下为64位版本
-  * Canary-x86：金丝雀版（32位）
+  * Canary：金丝雀版（按操作系统自动选择32位/64位版本）
+  * Canary-x86：金丝雀版（32位版）
   * Chromium-Continuous：人工打包、较稳定的Chromium
   * Chromium-Continuous-x64：人工打包、较稳定的Chromium（64位版）
   * Chromium-Snapshots：自动打包的Chromium，可能有很多bug，极不稳定
