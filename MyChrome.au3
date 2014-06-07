@@ -1,9 +1,9 @@
-#NoTrayIcon
+﻿#NoTrayIcon
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=Icon_1.ico
-#AutoIt3Wrapper_Res_Comment=http://code.google.com/p/my-chrome/
+#AutoIt3Wrapper_Res_Comment=可自动更新的 Google Chrome 便携版
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=2.9.2
+#AutoIt3Wrapper_Res_Fileversion=2.9.3.0
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -32,6 +32,7 @@
 #include <WinAPIReg.au3>
 #include <APIRegConstants.au3>
 #include <WinAPIDiag.au3>
+#include <Security.au3>
 #include "WinHttp.au3" ; http://www.autoitscript.com/forum/topic/84133-winhttp-functions/
 #include "SimpleMultiThreading.au3"
 
@@ -41,10 +42,10 @@ Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "2.9.2" ; MyChrome version
+Global Const $AppVersion = "2.9.3" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
-Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome
+Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome, $x86 = 0
 Global $EnableProxy, $ProxySever, $ProxyPort
 Global $AutoUpdateApp, $LastCheckAppUpdate
 Global $RunInBackground, $ExApp, $ExAppAutoExit, $ExApp2, $AppPID, $ExAppPID
@@ -55,7 +56,7 @@ Global $aExApp, $aExApp2, $aExAppPID[2]
 Global $hSettings, $SettingsOK
 Global $hSettingsOK, $hSettingsApply, $hStausbar
 Global $hChromePath, $hGetChromePath, $hChromeSource, $hCheckUpdate
-Global $hChannel, $hUpdateInterval, $hLatestChromeVer, $hCurrentVer, $hUserDataDir, $hCopyData
+Global $hChannel, $hx86, $hUpdateInterval, $hLatestChromeVer, $hCurrentVer, $hUserDataDir, $hCopyData
 Global $hAutoUpdateApp, $hCacheDir, $hSelectCacheDir, $hCacheSize
 Global $hParams, $hDownloadThreads, $hEnableProxy, $hProxySever, $hProxyPort
 Global $hAskBeforeUpdateChrome
@@ -73,14 +74,14 @@ Global $aDlInfo[6]
 ;~ 4 - The error value for the download. The value itself is arbitrary. Testing that the value is non-zero is sufficient for determining if an error occurred.
 ;~ 5 - The extended value for the download. The value is arbitrary and is primarily only useful to the AutoIt developers.
 Global $hEvent, $ClientKey, $Progid
-Global $REG[6][3] = [[$HKEY_CURRENT_USER, 'Software\Clients\StartMenuInternet'], _
+Global $aREG[6][3] = [[$HKEY_CURRENT_USER, 'Software\Clients\StartMenuInternet'], _
 		[$HKEY_LOCAL_MACHINE, 'Software\Clients\StartMenuInternet'], _
 		[$HKEY_CLASSES_ROOT, 'ftp'], _
 		[$HKEY_CLASSES_ROOT, 'http'], _
 		[$HKEY_CLASSES_ROOT, 'https'], _
 		[$HKEY_CLASSES_ROOT, '']] ; ChromeHTML.XXX
-Global $FileAsso[6] = [".htm", ".html", ".shtml", ".webp", ".xht", ".xhtml"]
-Global $UrlAsso[13] = ["ftp", "http", "https", "irc", "mailto", "mms", "news", "nntp", "sms", "smsto", "tel", "urn", "webcal"]
+Global $aFileAsso[6] = [".htm", ".html", ".shtml", ".webp", ".xht", ".xhtml"]
+Global $aUrlAsso[13] = ["ftp", "http", "https", "irc", "mailto", "mms", "news", "nntp", "sms", "smsto", "tel", "urn", "webcal"]
 
 FileChangeDir(@ScriptDir)
 $AppName = StringRegExpReplace(@ScriptName, "\.[^.]*$", "")
@@ -93,7 +94,8 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "CacheDir", "")
 	IniWrite($inifile, "Settings", "CacheSize", 0)
 	IniWrite($inifile, "Settings", "Channel", "Stable")
-	IniWrite($inifile, "Settings", "LastCheckUpdate", "2014/01/01 00:00:00")
+	IniWrite($inifile, "Settings", "x86", 0)
+	IniWrite($inifile, "Settings", "LastCheckUpdate", "2014/05/01 00:00:00")
 	IniWrite($inifile, "Settings", "UpdateInterval", 24)
 	IniWrite($inifile, "Settings", "AskBeforeUpdateChrome", 1) ; 1 - 更新前询问
 	IniWrite($inifile, "Settings", "EnableUpdateProxy", 0)
@@ -115,6 +117,7 @@ $UserDataDir = IniRead($inifile, "Settings", "UserDataDir", ".\User Data")
 $CacheDir = IniRead($inifile, "Settings", "CacheDir", "")
 $CacheSize = IniRead($inifile, "Settings", "CacheSize", 0) * 1
 $Channel = IniRead($inifile, "Settings", "Channel", "Stable")
+$x86 = IniRead($inifile, "Settings", "x86", 0) * 1
 $LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2014/01/01 00:00:00")
 $UpdateInterval = IniRead($inifile, "Settings", "UpdateInterval", 24)
 $AskBeforeUpdateChrome = IniRead($inifile, "Settings", "AskBeforeUpdateChrome", 1) * 1
@@ -135,22 +138,21 @@ $ExApp2 = IniRead($inifile, "Settings", "ExApp2", "")
 If $AppVersion <> IniRead($inifile, "Settings", "AppVersion", "") Then
 	$FirstRun = 1
 	IniWrite($inifile, "Settings", "AppVersion", $AppVersion)
-	If StringInStr($ExApp, "|") Then
-		$ExApp = StringReplace($ExApp, "|", "||")
-		$var = $ExApp
-		If StringRegExp($var, '^".*"$') Then
-			$var = '"' & $var & '"'
-		EndIf
-		IniWrite($inifile, "Settings", "ExApp", $var)
+	If FileExists($AppName & "设置.vbs") Then FileDelete($AppName & "设置.vbs")
+	If StringRight($Channel, 4) = "-x86" Then
+		$Channel = StringTrimRight($Channel, 4)
+		$x86 = 1
+		IniWrite($inifile, "Settings", "Channel", $Channel)
+		IniWrite($inifile, "Settings", "x86", $x86)
+	ElseIf StringRight($Channel, 4) = "-x64" Then
+		$Channel = StringTrimRight($Channel, 4)
+		IniWrite($inifile, "Settings", "Channel", $Channel)
 	EndIf
-	If StringInStr($ExApp2, "|") Then
-		$ExApp2 = StringReplace($ExApp2, "|", "||")
-		$var = $ExApp2
-		If StringRegExp($var, '^".*"$') Then
-			$var = '"' & $var & '"'
-		EndIf
-		IniWrite($inifile, "Settings", "ExApp2", $var)
-	EndIf
+	MsgBox(64, 'MyChrome', 'MyChrome ' & $AppVersion & ' 新特性：' & @CRLF & @CRLF & _
+			'1）按操作系统自动选择 32-bit 或 64-bit 浏览器，64-bit Win 7 以上系统优先下载 64-bit Chrome。' & @CRLF & _
+			'目前 Google 已推送的 64-bit 分支包括：Chromium-Continuous，Canary，DEV 等。' & @CRLF & _
+			'2）如果在设置中选择"32-bit (x86)"，则忽略操作系统区别，只下载 32-bit 浏览器。' & @CRLF & _
+			'3）MyChrome设置快捷方式改为"MyChrome.vbs"（去掉设置二字）。')
 EndIf
 #EndRegion ========= 兼容旧版 MyChrome =========
 
@@ -162,13 +164,18 @@ Opt("ExpandEnvStrings", 1)
 EnvSet("APP", @ScriptDir)
 ;~ 第一个启动参数为“-set”，或第一次运行，Chrome.exe、用户数据文件夹不存在，则显示设置窗口
 If ($cmdline[0] = 1 And $cmdline[1] = "-set") Or $FirstRun Or Not FileExists($ChromePath) Or Not FileExists($UserDataDir) Then
-	CreateSettingsShortcut(@ScriptDir & "\" & $AppName & "设置.vbs")
+	CreateSettingsShortcut(@ScriptDir & "\" & $AppName & ".vbs")
 	Settings()
 EndIf
 
 $ChromePath = FullPath($ChromePath)
 SplitPath($ChromePath, $ChromeDir, $ChromeExe)
 $UserDataDir = FullPath($UserDataDir)
+
+If IsAdmin() And $cmdline[0] = 1 And $cmdline[1] = "-SetDefaultGlobal" Then
+	CheckDefaultBrowser($ChromePath)
+	Exit
+EndIf
 
 ;~ write file First Run to prevent chrome from generate shortcut on desktop
 If Not FileExists($ChromeDir & "\First Run") Then FileWrite($ChromeDir & "\First Run", "")
@@ -181,8 +188,8 @@ For $i = 1 To $cmdline[0]
 		$Params &= ' ' & $cmdline[$i]
 	EndIf
 Next
-$PortableParam = '--no-default-browser-check'
-$PortableParam &= ' --user-data-dir="' & $UserDataDir & '"'
+;~ $PortableParam = '--no-default-browser-check'
+$PortableParam = '--user-data-dir="' & $UserDataDir & '"'
 If $CacheDir <> "" Then
 	$CacheDir = FullPath($CacheDir)
 	$PortableParam &= ' --disk-cache-dir="' & $CacheDir & '"'
@@ -192,18 +199,21 @@ If $CacheSize <> 0 Then
 EndIf
 
 Local $ChromeIsRunning = AppIsRunning($ChromePath)
+If Not $ChromeIsRunning And FileExists($ChromeDir & "\~updated") Then
+	ApplyUpdate()
+EndIf
 
 ; start chrome
 $AppPID = Run('"' & $ChromePath & '" ' & $PortableParam & ' ' & $Params, $ChromeDir)
 
 FileChangeDir(@ScriptDir)
-CreateSettingsShortcut(@ScriptDir & "\" & $AppName & "设置.vbs")
+CreateSettingsShortcut(@ScriptDir & "\" & $AppName & ".vbs")
 
 If $ChromeIsRunning Then
 	; check if another instance of mychrome is running
 	$list = ProcessList(StringRegExpReplace(@AutoItExe, ".*\\", ""))
 	For $i = 1 To $list[0][0]
-		If $list[$i][1] <> @AutoItPID And _GetProcPath($list[$i][1]) = @AutoItExe Then
+		If $list[$i][1] <> @AutoItPID And GetProcPath($list[$i][1]) = @AutoItExe Then
 			Exit ;exit if another instance of mychrome/chrome is running
 		EndIf
 	Next
@@ -237,7 +247,7 @@ If $CheckDefaultBrowser Then
 EndIf
 
 If FileExists($TaskBarDir) Then
-	CheckPinnedPrograms()
+	CheckPinnedPrograms($ChromePath)
 EndIf
 
 Global $FirstUpdateCheck = 1
@@ -249,14 +259,12 @@ EndIf
 
 
 If $CheckDefaultBrowser Then ; register REG for notification
-	Local $hKey
 	$hEvent = _WinAPI_CreateEvent()
-	For $i = 0 To 5
-		If $REG[$i][1] Then
-			$hKey = _WinAPI_RegOpenKey($REG[$i][0], $REG[$i][1], $KEY_NOTIFY)
-			If Not @error Then
-				$REG[$i][2] = $hKey
-				_WinAPI_RegNotifyChangeKeyValue($hKey, $REG_NOTIFY_CHANGE_LAST_SET, 1, 1, $hEvent)
+	For $i = 0 To UBound($aREG) - 1
+		If $aREG[$i][1] Then
+			$aREG[$i][2] = _WinAPI_RegOpenKey($aREG[$i][0], $aREG[$i][1], $KEY_NOTIFY)
+			If $aREG[$i][2] Then
+				_WinAPI_RegNotifyChangeKeyValue($aREG[$i][2], $REG_NOTIFY_CHANGE_LAST_SET, 1, 1, $hEvent)
 			EndIf
 		EndIf
 	Next
@@ -286,23 +294,16 @@ While 1
 	EndIf
 
 	If $TaskBarLastChange Then
-		CheckPinnedPrograms()
+		CheckPinnedPrograms($ChromePath)
 	EndIf
 
 	If $hEvent And Not _WinAPI_WaitForSingleObject($hEvent, 0) Then
 		; MsgBox(0, "", "Reg changed!")
 		Sleep(50)
 		CheckDefaultBrowser($ChromePath)
-
-		If Not $REG[5][2] And $REG[5][1] Then
-			$hKey = _WinAPI_RegOpenKey($REG[5][0], $REG[5][1], $KEY_NOTIFY)
-			If Not @error Then
-				$REG[5][2] = $hKey
-			EndIf
-		EndIf
-		For $i = 0 To 5
-			If $REG[$i][2] Then
-				_WinAPI_RegNotifyChangeKeyValue($REG[$i][2], $REG_NOTIFY_CHANGE_LAST_SET, 1, 1, $hEvent)
+		For $i = 0 To UBound($aREG) - 1
+			If $aREG[$i][2] Then
+				_WinAPI_RegNotifyChangeKeyValue($aREG[$i][2], $REG_NOTIFY_CHANGE_LAST_SET, 1, 1, $hEvent)
 			EndIf
 		Next
 	EndIf
@@ -356,13 +357,14 @@ Exit
 Func OnExit()
 	If $hEvent Then
 		_WinAPI_CloseHandle($hEvent)
-		For $i = 0 To 5
-			_WinAPI_RegCloseKey($REG[$i][2])
+		For $i = 0 To UBound($aREG) - 1
+			_WinAPI_RegCloseKey($aREG[$i][2])
 		Next
 	EndIf
 EndFunc   ;==>OnExit
 
 Func UpdateCheck()
+	Local $updated, $var
 	; Check mychrome update
 	If $AutoUpdateApp <> 0 And _DateDiff("h", $LastCheckAppUpdate, _NowCalc()) >= 24 Then
 		CheckAppUpdate()
@@ -371,13 +373,21 @@ Func UpdateCheck()
 	If $UpdateInterval >= 0 Then
 		If $UpdateInterval = 0 Then
 			If $FirstUpdateCheck Then
-				UpdateChrome($ChromePath, $Channel)
+				$updated = UpdateChrome($ChromePath, $Channel)
 			EndIf
 		Else
 			Local $var = _DateDiff("h", $LastCheckUpdate, _NowCalc())
 			If $var >= $UpdateInterval Then
-				UpdateChrome($ChromePath, $Channel)
+				$updated = UpdateChrome($ChromePath, $Channel)
 			EndIf
+		EndIf
+		If $updated And Not AppIsRunning($ChromePath) Then ; restart app/chrome
+			If @Compiled Then
+				Run('"' & @AutoItExe & '" --restore-last-session')
+			Else
+				Run('"' & @AutoItExe & '" "' & @ScriptFullPath & '" --restore-last-session')
+			EndIf
+			Exit
 		EndIf
 	EndIf
 
@@ -391,7 +401,7 @@ Func UpdateCheck()
 EndFunc   ;==>UpdateCheck
 
 ;~ for win7/vista or newer
-Func CheckPinnedPrograms()
+Func CheckPinnedPrograms($path)
 	If Not FileExists($TaskBarDir) Then
 		Return
 	EndIf
@@ -403,22 +413,22 @@ Func CheckPinnedPrograms()
 	$TaskBarLastChange = $ftime
 	Local $search = FileFindFirstFile($TaskBarDir & "\*.lnk")
 	If $search = -1 Then Return
-	Local $file, $ShellObj, $objShortcut, $TargetPath
+	Local $file, $ShellObj, $objShortcut
 	$ShellObj = ObjCreate("WScript.Shell")
 	If Not @error Then
 		While 1
 			$file = $TaskBarDir & "\" & FileFindNextFile($search)
 			If @error Then ExitLoop
 			$objShortcut = $ShellObj.CreateShortCut($file)
-			$TargetPath = $objShortcut.TargetPath
-			If $TargetPath = $ChromePath Then
+			If $path = $objShortcut.TargetPath Then
 				$objShortcut.TargetPath = @ScriptFullPath
-				$objShortcut.IconLocation = $ChromePath & ",0"
+				$objShortcut.IconLocation = $path & ",0"
 				$objShortcut.Save
 				$TaskBarLastChange = FileGetTime($TaskBarDir, 0, 1)
 				ExitLoop
 			EndIf
 		WEnd
+		$objShortcut = ""
 	EndIf
 	FileClose($search)
 EndFunc   ;==>CheckPinnedPrograms
@@ -434,23 +444,19 @@ Func CreateSettingsShortcut($fname)
 EndFunc   ;==>CreateSettingsShortcut
 
 
-;~ 检查默认浏览器，当检测到由 MyChrome 启动的 Chrome 浏览器被设为默认程序时，
-;~ 将默认浏览器重定向至 MyChrome。设置默认浏览器必须修改的注册表内容并不止这些，
-;~ MyChrome 只是在 google chrome 浏览器将自己设为默认的基础上作必要的修改。
-;~ 力求注册表项与原版一致，只修改值而不在注册表内留下没用的垃圾
 Func CheckDefaultBrowser($BrowserPath)
-	Local $InternetClient, $key, $id, $i, $j, $Root, $var, $param
+	Local $InternetClient, $key, $i, $j, $var, $RegWriteError = 0
 
 	; 在 StartMenuInternet 中注册后，Win XP 中点击开始菜单的“Internet”项才会启动chrome便携版
 	; Win vista / 7 “默认程序” 设置中才会出现Chrome浏览器
 	If Not $ClientKey Then
-		$Root = "HKCU"
-		For $i = 1 To 2 ; search chrome in internetclient
+		Local $aRoot[3] = ["HKCU", "HKLM64", "HKLM"]
+		For $i = 0 To 2 ; search chrome in internetclient
 			$j = 1
 			While 1
-				$InternetClient = RegEnumKey($Root & "\Software\Clients\StartMenuInternet", $j)
+				$InternetClient = RegEnumKey($aRoot[$i] & "\Software\Clients\StartMenuInternet", $j)
 				If @error <> 0 Then ExitLoop
-				$key = $Root & '\SOFTWARE\Clients\StartMenuInternet\' & $InternetClient
+				$key = $aRoot[$i] & '\SOFTWARE\Clients\StartMenuInternet\' & $InternetClient
 				$var = RegRead($key & '\DefaultIcon', '')
 				If StringInStr($var, $BrowserPath) Then
 					$ClientKey = $key
@@ -459,13 +465,13 @@ Func CheckDefaultBrowser($BrowserPath)
 				EndIf
 				$j += 1
 			WEnd
-			$Root = "HKLM64"
 		Next
 	EndIf
 	If $ClientKey Then
 		$var = RegRead($ClientKey & '\shell\open\command', '')
 		If Not StringInStr($var, @ScriptFullPath) Then
-			RegWrite($ClientKey & '\shell\open\command', '', 'REG_SZ', '"' & @ScriptFullPath & '"')
+			$RegWriteError += Not RegWrite($ClientKey & '\shell\open\command', _
+					'', 'REG_SZ', '"' & @ScriptFullPath & '"')
 		EndIf
 	EndIf
 
@@ -476,10 +482,15 @@ Func CheckDefaultBrowser($BrowserPath)
 	If $Progid Then
 		$var = RegRead('HKCR\' & $Progid & '\shell\open\command', '')
 		If Not StringInStr($var, @ScriptFullPath) Then
+			RegDelete('HKCR\' & $Progid & '\shell\open\ddeexec', '')
 			RegDelete('HKCR\' & $Progid & '\shell\open\command', 'DelegateExecute') ; 解决 Win8“未注册类”错误
-			RegWrite('HKCR\' & $Progid & '\shell\open\command', '', 'REG_SZ', '"' & @ScriptFullPath & '" -- "%1"')
+			$RegWriteError += Not RegWrite('HKCR\' & $Progid & '\shell\open\command', _
+					'', 'REG_SZ', '"' & @ScriptFullPath & '" -- "%1"')
 		EndIf
-		$REG[5][1] = $Progid ; for reg notification
+		If Not $aREG[5][1] Then
+			$aREG[5][1] = $Progid ; for reg notification
+			$aREG[5][2] = _WinAPI_RegOpenKey($aREG[5][0], $aREG[5][1], $KEY_NOTIFY)
+		EndIf
 	EndIf
 
 	Local $aAsso[3] = ['ftp', 'http', 'https']
@@ -488,7 +499,10 @@ Func CheckDefaultBrowser($BrowserPath)
 		If StringInStr($var, $BrowserPath) Then
 			$var = RegRead('HKCR\' & $aAsso[$i] & '\shell\open\command', '')
 			If Not StringInStr($var, @ScriptFullPath) Then
-				RegWrite('HKCR\' & $aAsso[$i] & '\shell\open\command', '', 'REG_SZ', '"' & @ScriptFullPath & '" -- "%1"')
+				RegDelete('HKCR\' & $aAsso[$i] & '\shell\open\ddeexec', '')
+				RegDelete('HKCR\' & $aAsso[$i] & '\shell\open\command', 'DelegateExecute')
+				$RegWriteError += Not RegWrite('HKCR\' & $aAsso[$i] & '\shell\open\command', _
+						'', 'REG_SZ', '"' & @ScriptFullPath & '" -- "%1"')
 			EndIf
 		EndIf
 	Next
@@ -500,13 +514,21 @@ Func CheckDefaultBrowser($BrowserPath)
 			RegWrite('HKLM64\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe', 'Path', 'REG_SZ', @ScriptDir)
 		EndIf
 	EndIf
+
+	If $RegWriteError And Not _IsUACAdmin() And @extended Then
+		If @Compiled Then
+			ShellExecute(@ScriptName, "-SetDefaultGlobal", @ScriptDir, "runas")
+		Else
+			ShellExecute(@AutoItExe, '"' & @ScriptFullPath & '" -SetDefaultGlobal', @ScriptDir, "runas")
+		EndIf
+	EndIf
 EndFunc   ;==>CheckDefaultBrowser
 Func FindChromeProgid($BrowserPath)
 	Local $i, $id, $var
 	RegRead('HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts', '')
 	If @error <> 1 Then
-		For $i = 0 To 5
-			$id = RegRead('HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\' & $FileAsso[$i] & '\UserChoice', 'Progid')
+		For $i = 0 To UBound($aFileAsso) - 1
+			$id = RegRead('HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\' & $aFileAsso[$i] & '\UserChoice', 'Progid')
 			If $id Then
 				$var = RegRead('HKCR\' & $id & '\DefaultIcon', '')
 				If StringInStr($var, $BrowserPath) Then
@@ -516,8 +538,8 @@ Func FindChromeProgid($BrowserPath)
 		Next
 	EndIf
 
-	For $i = 0 To 5
-		$id = RegRead('HKCR\' & $FileAsso[$i], '')
+	For $i = 0 To UBound($aFileAsso) - 1
+		$id = RegRead('HKCR\' & $aFileAsso[$i], '')
 		$var = RegRead('HKCR\' & $id & '\DefaultIcon', '')
 		If StringInStr($var, $BrowserPath) Then
 			Return $id
@@ -526,8 +548,8 @@ Func FindChromeProgid($BrowserPath)
 
 	RegRead('HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations', '')
 	If @error <> 1 Then
-		For $i = 0 To 12
-			$id = RegRead('HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\' & $UrlAsso[$i] & '\UserChoice', 'Progid')
+		For $i = 0 To UBound($aUrlAsso) - 1
+			$id = RegRead('HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\' & $aUrlAsso[$i] & '\UserChoice', 'Progid')
 			If $id Then
 				$var = RegRead('HKCR\' & $id & '\DefaultIcon', '')
 				If StringInStr($var, $BrowserPath) Then
@@ -540,21 +562,32 @@ Func FindChromeProgid($BrowserPath)
 EndFunc   ;==>FindChromeProgid
 
 
-;~ 查检 MyChrome 更新
+;~ check MyChrome update
 Func CheckAppUpdate()
 	Local $var, $match, $LatestAppVer, $msg, $update, $url
+	Local $slatest = "latest", $surl = "url", $supdate = "update"
+	If @AutoItX64 Then
+		$slatest &= "_x64"
+		$surl &= "_x64"
+		$supdate &= "_x64"
+	EndIf
 	$LastCheckAppUpdate = _NowCalc()
 	IniWrite($inifile, "Settings", "LastCheckAppUpdate", $LastCheckAppUpdate)
+
 	$var = BinaryToString(InetRead("http://my-chrome.googlecode.com/svn/Update.txt", 27), 4)
 	$var = StringStripWS($var, 3) ; 去掉开头、结尾的空字符
-	$match = StringRegExp($var, "(?i)(?s)([\d\.]+)\s*\n+\s*(https?://\S+)\s*\n+\s*(.*)", 1)
+	$match = StringRegExp($var, '(?im)^' & $slatest & '=(\S+)', 1)
 	If @error Then Return
-
 	$LatestAppVer = $match[0]
-	$url = $match[1]
-	$update = $match[2]
 	If Not VersionCompare($LatestAppVer, $AppVersion) Then Return
-	If $AutoUpdateApp Then
+	$match = StringRegExp($var, '(?im)^' & $surl & '=(\S+)', 1)
+	If @error Then Return
+	$url = $match[0]
+	$match = StringRegExp($var, '(?im)' & $supdate & '=(.+)', 1)
+	If @error Then Return
+	$update = StringReplace($match[0], "\n", @CRLF)
+
+	If $AutoUpdateApp = 1 Then
 		$msg = MsgBox(68, 'MyChrome', "MyChrome " & $LatestAppVer & " 已发布，更新内容：" & _
 				@CRLF & @CRLF & $update & @CRLF & @CRLF & "是否更新？")
 		If $msg <> 6 Then Return
@@ -581,7 +614,7 @@ Func CheckAppUpdate()
 		FileDelete($temp & "\7z.dll")
 		FileDelete($file)
 		FileMove($temp & "\*.*", @ScriptDir & "\", 9)
-		MsgBox(64, "MyChrome", "MyChrome 已更新至 " & $LatestAppVer & " ！" & @CRLF & "原 MyChrome 已备份为 " & @ScriptName & ".bak。")
+		MsgBox(64, "MyChrome", "MyChrome 已更新至 " & $LatestAppVer & " ！" & @CRLF & "原 App 已备份为 " & @ScriptName & ".bak。")
 	Else
 		$msg = MsgBox(20, "MyChrome", "MyChrome 自动更新失败！" & @CRLF & @CRLF & "是否去软件发布页手动下载更新？")
 		If $msg = 6 Then ; Yes
@@ -639,8 +672,7 @@ Func Settings()
 
 	GUICtrlCreateLabel("分支：", 20, 174, 80, 20)
 	$hChannel = GUICtrlCreateCombo("", 100, 170, 150, 20, $CBS_DROPDOWNLIST)
-	GUICtrlSetData(-1, "Stable|Beta|Dev|Canary|Canary-x86|Chromium-Continuous|" & _
-			"Chromium-Continuous-x64|Chromium-Snapshots", $Channel)
+	GUICtrlSetData(-1, "Stable|Beta|Dev|Canary|Chromium-Continuous|Chromium-Snapshots", $Channel)
 	GUICtrlSetTip(-1, "Stable - 稳定版(正式版)" & @CRLF & "Beta - 测试版" & @CRLF & "Dev - 开发版" & @CRLF & _
 			"Canary - 金丝雀版" & @CRLF & "Chromium - 更新快但不稳定")
 	GUICtrlSetOnEvent(-1, "CheckChrome")
@@ -649,15 +681,24 @@ Func Settings()
 	$hUpdateInterval = GUICtrlCreateCombo("", 130, 200, 120, 20, $CBS_DROPDOWNLIST)
 	GUICtrlSetData(-1, "每次启动时|每小时|每天|每周|从不", $UpdateInterval)
 
-	GUICtrlCreateLabel("最新版本：", 280, 174, 70, 20)
-	$hLatestChromeVer = GUICtrlCreateLabel("", 350, 174, 140, 20)
+	$hx86 = GUICtrlCreateCheckbox(" 32-bit (x86)", 280, 174, -1, 20)
+	GUICtrlSetTip(-1, "勾选此项下载 32-bit 浏览器。")
+	GUICtrlSetOnEvent(-1, "Change_Browser_Bit")
+	If $x86 Then GUICtrlSetState(-1, $GUI_CHECKED)
+
+	$hCheckUpdate = GUICtrlCreateButton("立即更新", 400, 170, 80, 25)
+	GUICtrlSetTip(-1, "检查浏览器更新" & @CRLF & "下载最新版至 chrome 程序文件夹")
+	GUICtrlSetOnEvent(-1, "Start_End_ChromeUpdate")
+
+	GUICtrlCreateLabel("最新版本：", 280, 204, 70, 20)
+	$hLatestChromeVer = GUICtrlCreateLabel("", 350, 204, 140, 20)
 	GUICtrlSetTip(-1, "复制下载地址到剪贴板")
 	GUICtrlSetCursor(-1, 0)
 	GUICtrlSetColor(-1, 0x0000FF)
 	GUICtrlSetOnEvent(-1, "ShowUrl")
 
-	GUICtrlCreateLabel("当前版本：", 280, 204, 70, 20)
-	$hCurrentVer = GUICtrlCreateLabel("", 350, 204, 140, 20)
+	GUICtrlCreateLabel("当前版本：", 280, 235, 70, 20)
+	$hCurrentVer = GUICtrlCreateLabel("", 355, 235, 140, 20)
 	GUICtrlSetData(-1, $ChromeFileVersion & "  " & $ChromeLastChange)
 
 	GUICtrlCreateLabel("发现新版本时", 20, 235, 110, 20)
@@ -669,11 +710,6 @@ Func Settings()
 		$sAskBeforeUpdateChrome = "自动更新"
 	EndIf
 	GUICtrlSetData(-1, "通知我|自动更新", $sAskBeforeUpdateChrome)
-
-	$hCheckUpdate = GUICtrlCreateButton("立即更新", 280, 230, 100, 20)
-	GUICtrlSetTip(-1, "检查浏览器更新" & @CRLF & "下载最新版至 chrome 程序文件夹")
-	GUICtrlSetOnEvent(-1, "Start_End_ChromeUpdate")
-
 
 	GUICtrlCreateGroup("Google Chrome 用户数据文件", 10, 280, 480, 80)
 	GUICtrlCreateLabel("用户数据文件夹：", 20, 310, 110, 20)
@@ -787,7 +823,7 @@ Func Settings()
 	$hSettingsApply = GUICtrlCreateButton("应用", 420, 470, 70, 20)
 	GUICtrlSetTip(-1, "应用")
 	GUICtrlSetOnEvent(-1, "SettingsApply")
-	$hStausbar = _GUICtrlStatusBar_Create($hSettings, -1, '双击软件目录下的 "' & $AppName & '设置.vbs" 文件可调出此窗口')
+	$hStausbar = _GUICtrlStatusBar_Create($hSettings, -1, '双击软件目录下的 "' & $AppName & '.vbs" 文件可调出此窗口')
 	Opt("ExpandEnvStrings", 1)
 
 	Local $ChromeExists = CheckChromeInSystem($Channel) ; 检查系统中是否有 Channel 对应的 Chrome 程序文件
@@ -815,6 +851,14 @@ Func Settings()
 	$hSettings = "" ; free the handle
 EndFunc   ;==>Settings
 
+Func Change_Browser_Bit()
+	If GUICtrlRead($hx86) = $GUI_CHECKED Then
+		$x86 = 1
+	Else
+		$x86 = 0
+	EndIf
+	ShowLatestChromeVer()
+EndFunc   ;==>Change_Browser_Bit
 
 Func AddExApp()
 	Local $path
@@ -881,7 +925,8 @@ EndFunc   ;==>GetUserDataDir
 Func CopyChromeFromSystem()
 	$ChromePath = GUICtrlRead($hChromePath)
 	SplitPath($ChromePath, $ChromeDir, $ChromeExe)
-	WaitChromeClose($ChromePath, "浏览器正在运行，无法完成提取程序文件！请关闭 Google Chrome 浏览器后继续。")
+	$ChromeIsRunning = ChromeIsRunning($ChromePath, "请关闭 Google Chrome 浏览器，以便更新浏览器程序文件。")
+	If $ChromeIsRunning Then Return
 	_GUICtrlStatusBar_SetText($hStausbar, "从系统中提取 Google Chrome 程序文件...")
 	SplashTextOn("MyChrome", "正在提取 Chrome 程序文件...", 300, 100)
 	FileCopy($DefaultChromeDir & "\*.*", $ChromeDir & "\", 1 + 8)
@@ -927,7 +972,11 @@ Func SettingsApply()
 			$UpdateInterval = 0
 	EndSwitch
 	$Channel = GUICtrlRead($hChannel)
-
+	If GUICtrlRead($hx86) = $GUI_CHECKED Then
+		$x86 = 1
+	Else
+		$x86 = 0
+	EndIf
 	$UserDataDir = RelativePath(GUICtrlRead($hUserDataDir))
 	Local $CopyData = GUICtrlRead($hCopyData)
 	Switch GUICtrlRead($hAutoUpdateApp)
@@ -982,6 +1031,7 @@ Func SettingsApply()
 	IniWrite($inifile, "Settings", "Params", $Params)
 	IniWrite($inifile, "Settings", "UpdateInterval", $UpdateInterval)
 	IniWrite($inifile, "Settings", "Channel", $Channel)
+	IniWrite($inifile, "Settings", "x86", $x86)
 	IniWrite($inifile, "Settings", "CacheDir", $CacheDir)
 	IniWrite($inifile, "Settings", "CacheSize", $CacheSize)
 	IniWrite($inifile, "Settings", "RunInBackground", $RunInBackground)
@@ -1004,8 +1054,8 @@ Func SettingsApply()
 	Local $ChromeSource = GUICtrlRead($hChromeSource)
 	If $ChromeSource <> "从网络下载" And Not FileExists($ChromePath) Then ; Chrome 路径
 		Local $msg = MsgBox(36, "MyChrome", "浏览器程序文件不存在或者路径错误：" & @CRLF & $ChromePath & @CRLF & @CRLF & _
-				"请重新设置 chrome 浏览器路径，或者选择从网络下载浏览器程序文件。" & @CRLF & @CRLF & _
-				"需要从网络下载 Google Chrome 最新版吗？", 0, $hSettings)
+				"请重新设置 chrome 浏览器路径，或者选择从网络下载。" & @CRLF & @CRLF & _
+				"需要从网络下载 Google Chrome 的最新版本吗？", 0, $hSettings)
 		If $msg = 6 Then
 			GUICtrlSetData($hChromeSource, "")
 			GUICtrlSetData($hChromeSource, "----  请选择  ----|从系统中提取|从网络下载|从离线安装文件提取", "从网络下载")
@@ -1033,7 +1083,7 @@ Func SettingsApply()
 				SplashTextOn("MyChrome", "正在复制 Chrome 用户数据文件...", 300, 100)
 				DirCopy($DefaultUserDataDir, $UserDataDir, 1) ; copy user data
 				SplashOff()
-				_GUICtrlStatusBar_SetText($hStausbar, '双击软件目录下的 "' & $AppName & '设置.vbs" 文件可调出此窗口')
+				_GUICtrlStatusBar_SetText($hStausbar, '双击软件目录下的 "' & $AppName & '.vbs" 文件可调出此窗口')
 				ExitLoop
 			EndIf
 		WEnd
@@ -1042,7 +1092,7 @@ Func SettingsApply()
 
 	$ChromeSource = GUICtrlRead($hChromeSource)
 	If $ChromeSource = "从网络下载" Then
-		MsgBox(64, "MyChrome", "即将启动更新程序，从网络下载 Google Chrome 最新版！", 0, $hSettings)
+		MsgBox(64, "MyChrome", "即将从网络下载 Google Chrome 的最新版本！", 0, $hSettings)
 		_GUICtrlComboBox_SelectString($hChromeSource, "----  请选择  ----")
 		Start_End_ChromeUpdate()
 	EndIf
@@ -1051,11 +1101,6 @@ EndFunc   ;==>SettingsApply
 ;~ 检查系统中是否有 Channel 对应的 chrome 程序文件及对应最新版本号
 Func CheckChrome()
 	Global $Channel = GUICtrlRead($hChannel)
-	If $Channel = "Chromium-Continuous-x64" Then
-		If @OSArch <> "X64" Then
-			MsgBox(64, "MyChrome", "Chromium-Continuous-x64 只能在 Windows x64 环境下运行，在当前系统中可能无法使用。")
-		EndIf
-	EndIf
 	CheckChromeInSystem($Channel)
 	If $IsUpdating Then Return
 	If ProcessExists($iThreadPid) Then
@@ -1092,7 +1137,7 @@ Func CheckChromeInSystem($Channel)
 
 	; 以管理员身份在线安装在 @ProgramFilesDir
 	$DefaultChromeDir = @ProgramFilesDir & "\" & $dir
-	$DefaultChromeVer = RegRead("HKLM\" & $Subkey, "pv")
+	$DefaultChromeVer = RegRead("HKLM64\" & $Subkey, "pv")
 	If FileExists($DefaultChromeDir & "\chrome.exe") And FileExists($DefaultChromeDir & "\" & $DefaultChromeVer & "\chrome.dll") Then
 		Return 1
 	EndIf
@@ -1119,9 +1164,9 @@ Func ShowLatestChromeVer()
 	_SetVar("DLInfo", "|||||")
 	_SetVar("ResponseTimer", TimerInit())
 	If $EnableProxy = 1 Then
-		$iThreadPid = _StartThread("GetLatestVersion", $Channel, $ProxySever, $ProxyPort)
+		$iThreadPid = _StartThread("GetLatestVersion", $Channel, $x86, $ProxySever, $ProxyPort)
 	Else
-		$iThreadPid = _StartThread("GetLatestVersion", $Channel)
+		$iThreadPid = _StartThread("GetLatestVersion", $Channel, $x86)
 	EndIf
 
 	While 1
@@ -1138,7 +1183,7 @@ Func ShowLatestChromeVer()
 	WEnd
 	_KillThread($iThreadPid)
 	If Not $aDlInfo[2] Then
-		_GUICtrlStatusBar_SetText($hStausbar, "获取 Google Chrome 最新版信息失败")
+		_GUICtrlStatusBar_SetText($hStausbar, "获取 Google Chrome 更新信息失败")
 	ElseIf $aDlInfo[3] Then
 		$LatestChromeVer = $aDlInfo[0]
 		$LatestChromeUrl = $aDlInfo[1]
@@ -1267,15 +1312,15 @@ Func UpdateChrome($ChromePath, $Channel)
 
 	$IsUpdating = 1
 	Local $msg, $ResponseTimer
-	If Not $LatestChromeVer Then ; 获取最新版信息
+	If Not $LatestChromeVer Then ; 获取更新信息
 		Do
 			$LatestChromeVer = ""
 			$LatestChromeUrl = ""
 			_SetVar("DLInfo", "|||||")
 			If $EnableProxy = 1 Then
-				$iThreadPid = _StartThread("GetLatestVersion", $Channel, $ProxySever, $ProxyPort)
+				$iThreadPid = _StartThread("GetLatestVersion", $Channel, $x86, $ProxySever, $ProxyPort)
 			Else
-				$iThreadPid = _StartThread("GetLatestVersion", $Channel)
+				$iThreadPid = _StartThread("GetLatestVersion", $Channel, $x86)
 			EndIf
 			$ResponseTimer = TimerInit()
 			_SetVar("ResponseTimer", $ResponseTimer)
@@ -1298,14 +1343,14 @@ Func UpdateChrome($ChromePath, $Channel)
 			WEnd
 			_KillThread($iThreadPid)
 			If Not $aDlInfo[2] Then
-				_GUICtrlStatusBar_SetText($hStausbar, "获取 Google Chrome 最新版信息失败")
+				_GUICtrlStatusBar_SetText($hStausbar, "获取 Google Chrome 更新信息失败")
 			ElseIf $aDlInfo[3] Then
 				$LatestChromeVer = $aDlInfo[0]
 				$LatestChromeUrl = $aDlInfo[1]
 			EndIf
 			If Not $LatestChromeVer Then
 				If Not IsHWnd($hSettings) Then ExitLoop
-				$msg = MsgBox(16 + 5, "更新错误-MyChrome", "获取 Google Chrome (" & $Channel & ") 最新版信息失败！" & @CRLF & _
+				$msg = MsgBox(16 + 5, "更新错误-MyChrome", "获取 Google Chrome (" & $Channel & ") 更新信息失败！" & @CRLF & _
 						"请检查网络连接和设置，稍后再试。", 0, $hSettings)
 			EndIf
 		Until $LatestChromeVer Or $msg = 2 ; Cancel
@@ -1339,7 +1384,7 @@ Func UpdateChrome($ChromePath, $Channel)
 	Local $restart = 1, $error, $errormsg, $updated
 	If $msg = 6 Then ; Yes
 		$IsUpdating = $LatestChromeUrl
-		Local $localfile = $ChromeDir & "\~Update\chrome_installer.exe"
+		Local $localfile = $ChromeDir & "\~update\chrome_installer.exe"
 		If IsHWnd($hSettings) Then
 			_GUICtrlStatusBar_SetText($hStausbar, "下载 Google Chrome ...")
 		ElseIf Not @TrayIconVisible Then
@@ -1429,7 +1474,7 @@ Func CancelUpdate()
 	EndIf
 EndFunc   ;==>CancelUpdate
 
-#Region 获取 Chrome 最新版信息（最新版本号，下载地址）
+#Region 获取 Chrome 更新信息（最新版本号，下载地址）
 ;~ $aDlInfo[6]
 ;~ 0 - Latest Chrome Version
 ;~ 1 - Latest Chrome url
@@ -1438,28 +1483,33 @@ EndFunc   ;==>CancelUpdate
 ;~ 4 - The error value for the download. The value itself is arbitrary. Testing that the value is non-zero is sufficient for determining if an error occurred.
 ;~ 5 - The extended value for the download. The value is arbitrary and is primarily only useful to the AutoIt developers.
 ;~ 从网络获取 chrome 最新版本号
-Func GetLatestVersion($Channel, $ProxySever = "", $ProxyPort = "")
+Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 	Local $urlbase, $var, $LatestVer, $LatestUrl, $i, $j
-
+	Local $OSArch = StringLower(@OSArch)
 	AdlibRegister("ResetTimer", 1000) ; 定时向父进程发送时间信息（响应信息）
+
+;~ 	for test only
+;~ 	If Not $x86 Then
+;~ 		$OSArch = "x64"
+;~ 	EndIf
+;~ 	for test only
 
 	; get latest Chromium developer build
 	If StringInStr($Channel, "Chromium") Then
-		_SetVar("DLInfo", "|||||正在连接服务器，获取 Chromium 最新版信息...")
 		If $ProxySever <> "" And $ProxyPort <> "" Then
 			HttpSetProxy(2, $ProxySever & ":" & $ProxyPort)
 		EndIf
 		If $Channel = "Chromium-Continuous" Then
-			$urlbase = "http://storage.googleapis.com/chromium-browser-continuous/Win/"
-			; $urlbase = "http://commondatastorage.googleapis.com/chromium-browser-continuous/Win/"
-		ElseIf $Channel = "Chromium-Continuous-x64" Then
-			$urlbase = "http://storage.googleapis.com/chromium-browser-continuous/Win_x64/"
-			; $urlbase = "http://commondatastorage.googleapis.com/chromium-browser-continuous/Win_x64/"
+			If $x86 Or $OSArch = "x86" Then
+				$urlbase = "http://storage.googleapis.com/chromium-browser-continuous/Win/"
+			Else
+				$urlbase = "http://storage.googleapis.com/chromium-browser-continuous/Win_x64/"
+			EndIf
 		Else
 			$urlbase = "http://storage.googleapis.com/chromium-browser-snapshots/Win/"
-			; $urlbase = "http://commondatastorage.googleapis.com/chromium-browser-snapshots/Win/"
 		EndIf
-		For $i = 1 To 3
+		For $i = 1 To 2
+			_SetVar("DLInfo", "|||||从服务器获取 Chromium 更新信息... 第 " & $i & " 次尝试")
 			$var = BinaryToString(InetRead($urlbase & "LAST_CHANGE", 16))
 			If StringIsDigit($var) Then ExitLoop
 			Sleep(200)
@@ -1467,7 +1517,8 @@ Func GetLatestVersion($Channel, $ProxySever = "", $ProxyPort = "")
 
 		If Not StringIsDigit($var) Then ; try https
 			$urlbase = StringReplace($urlbase, "http://", "https://")
-			For $i = 1 To 3
+			For $i = 1 To 2
+				_SetVar("DLInfo", "|||||从服务器获取 Chromium 更新信息... 第 " & $i + 2 & " 次尝试")
 				$var = BinaryToString(InetRead($urlbase & "LAST_CHANGE", 16))
 				If StringIsDigit($var) Then ExitLoop
 				Sleep(200)
@@ -1475,39 +1526,51 @@ Func GetLatestVersion($Channel, $ProxySever = "", $ProxyPort = "")
 		EndIf
 
 		If Not StringIsDigit($var) Then
-			_SetVar("DLInfo", "||1||1|获取 Chromium 最新版信息失败，请检查网络连接，稍后再试。")
+			_SetVar("DLInfo", "||1||1|获取 Chromium 更新信息失败，请检查网络连接，稍后再试。")
 			Return
 		EndIf
 		$LatestVer = $var
 		$LatestUrl = $urlbase & $LatestVer & "/mini_installer.exe"
-		_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Chromium 最新版信息")
+		_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Chromium 更新信息")
 		Return
 	EndIf
 
 	; 利用 Google Update API 获取 stable/beta/dev/canary 最新版本号 http://code.google.com/p/omaha/wiki/ServerProtocol
-	Local $appid, $ap, $data, $match, $OSArch
-	_SetVar("DLInfo", "|||||正在连接服务器，获取 Google Chrome 最新版信息...")
+	Local $appid, $ap, $data, $match
 	Switch $Channel
 		Case "Stable"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
-			$ap = "-multi-chrome"
+			If $x86 Or $OSArch = "x86" Then
+				$ap = "-multi-chrome"
+				$OSArch = "x86"
+			Else
+				$ap = "x64-multi-chrome"
+			EndIf
 		Case "Beta"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
-			$ap = "1.1-beta"
+			If $x86 Or $OSArch = "x86" Then
+				$ap = "1.1-beta"
+				$OSArch = "x86"
+			Else
+				$ap = "1.1-beta-x64-beta-multi-chrome"
+			EndIf
 		Case "Dev"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
-			$ap = "2.0-dev"
+			If $x86 Or $OSArch = "x86" Then
+				$ap = "2.0-dev"
+				$OSArch = "x86"
+			Else
+				$ap = "2.0-dev-x64-dev-multi-chrome"
+			EndIf
 		Case "Canary"
 			$appid = "4EA16AC7-FD5A-47C3-875B-DBF4A2008C20"
-			$ap = ""
-		Case "Canary-x86"
-			$appid = "4EA16AC7-FD5A-47C3-875B-DBF4A2008C20"
-			$ap = ""
-			$OSArch = "x86"
+			If $x86 Or $OSArch = "x86" Then
+				$ap = ""
+				$OSArch = "x86"
+			Else
+				$ap = "x64-canary"
+			EndIf
 	EndSwitch
-	If Not $OSArch Then
-		$OSArch = StringLower(@OSArch)
-	EndIf
 	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.23.9" shell_version="1.3.21.103" ismachine="0" ' & _
 			'sessionid="{3597644B-2952-4F92-AE55-D315F45F80A5}" installsource="ondemandcheckforupdate" ' & _
 			'requestid="{CD7523AD-A40D-49F4-AEEF-8C114B804658}" dedup="cr"><os platform="win" version="' & WinVer() & '" ' & _
@@ -1521,10 +1584,14 @@ Func GetLatestVersion($Channel, $ProxySever = "", $ProxyPort = "")
 	Else
 		$hHTTPOpen = _WinHttpOpen() ; 无代理
 	EndIf
-	_WinHttpSetTimeouts($hHTTPOpen, 0, 10000, 10000, 10000) ; 设置超时
+	_WinHttpSetTimeouts($hHTTPOpen, 0, 5000, 5000, 5000) ; 设置超时
 	For $i = 1 To 3
+		_SetVar("DLInfo", "|||||正在连接 Chrome 更新服务器... 第 " & $i & " 次尝试")
+;~ 		$hConnect = _WinHttpConnect($hHTTPOpen, "clients2.google.com", 80)
+;~ 		$hConnect = _WinHttpConnect($hHTTPOpen, "clients4.google.com", 80)
 		$hConnect = _WinHttpConnect($hHTTPOpen, "tools.google.com", 80)
-		$var = _WinHttpSimpleRequest($hConnect, "POST", "service/update2", Default, $data)
+		_SetVar("DLInfo", "|||||从服务器获取 Chrome 更新信息... 第 " & $i & " 次尝试")
+		$var = _WinHttpSimpleRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.23.9;winhttp")
 		_WinHttpCloseHandle($hConnect)
 		$match = StringRegExp($var, '(?i)<manifest +version="(.+?)".* name="(.+?)"', 1)
 		$error = @error
@@ -1532,16 +1599,16 @@ Func GetLatestVersion($Channel, $ProxySever = "", $ProxyPort = "")
 		Sleep(200)
 	Next
 	If $error Then
-		_SetVar("DLInfo", "||1||1|获取 Google Chrome 最新版信息失败，请检查网络连接，稍后再试。") ; 无法获取更新地址
+		_SetVar("DLInfo", "||1||1|获取 Chrome 更新信息失败，请检查网络连接，稍后再试。") ; 无法获取更新地址
 	Else
 		$version = $match[0]
 		$name = $match[1]
 		$match = StringRegExp($var, '(?i)<url +codebase="(.+?)"', 3)
 		If @error Then
-			_SetVar("DLInfo", "||1||1|获取 Google Chrome 最新版信息失败，请检查网络连接，稍后再试。") ; 无法获取更新地址
+			_SetVar("DLInfo", "||1||1|解析 Chrome 下载地址出错。若错误反复出现，请向软件作者反馈。") ; 无法获取更新地址
 		Else
-			_SetVar("DLInfo", "|||||正在验证 Google Chrome 最新版下载地址...")
 			For $i = 0 To UBound($match) - 1
+				_SetVar("DLInfo", "|||||尝试连接 " & $match[$i] & $name)
 				$a = HttpParseUrl($match[$i] & $name)
 				For $j = 1 To 2
 					$hConnect = _WinHttpConnect($hHTTPOpen, $a[0], $a[2])
@@ -1558,12 +1625,12 @@ Func GetLatestVersion($Channel, $ProxySever = "", $ProxyPort = "")
 					_WinHttpCloseHandle($hHTTPOpen)
 					$LatestVer = $version
 					$LatestUrl = $match[$i] & $name
-					_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Google Chrome 最新版信息")
+					_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Chrome 更新信息")
 					Return
 				EndIf
 			Next
 			If Not $LatestVer Then
-				_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1||2|已获取的 Google Chrome 下载地址无法连接，请稍后再试。")
+				_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1||2|已获取的 Chrome 下载地址无法连接，请稍后再试。")
 			EndIf
 		EndIf
 	EndIf
@@ -1572,7 +1639,7 @@ EndFunc   ;==>GetLatestVersion
 Func ResetTimer() ; 定时向父进程发送时间信息，告诉父进程：我还活着！
 	_SetVar("ResponseTimer", TimerInit())
 EndFunc   ;==>ResetTimer
-#EndRegion 获取 Chrome 最新版信息（最新版本号，下载地址）
+#EndRegion 获取 Chrome 更新信息（最新版本号，下载地址）
 
 #Region DownloadChrome
 ; #FUNCTION# ;===============================================================================
@@ -1668,7 +1735,7 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 		Next
 
 		If Not $aThread[0] Or $header = "" Then
-			Return SetError(1, "", "||1||1|连接 Google Chrome 更新服务器失败") ; 无法连接服务器
+			Return SetError(1, 0, "||1||1|连接 Google Chrome 更新服务器失败") ; 无法连接服务器
 		EndIf
 		If StringRegExp($header, '(?i)(?s)^HTTP/[\d\.]+ +200 ') Then ; 不支持断点续传
 			Dim $DownLoadInfo[1][5] = [[0, 0, 0]]
@@ -1824,7 +1891,7 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 		Next
 
 		If $FileError Or (Not $LiveThreads And $ErrorThreads) Then
-			Return SetError(2, "", $size & "|" & $remotesize & "|1||2|下载 Google Chrome 出错") ; 文件写入出错或下载出错
+			Return SetError(2, 0, $size & "|" & $remotesize & "|1||2|下载 Google Chrome 出错") ; 文件写入出错或下载出错
 		EndIf
 
 		If TimerDiff($t) > 200 Then
@@ -1845,9 +1912,9 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 	FileClose($hDlFile)
 	FileSetAttrib($localfile, "+A") ; Win8中没这行会出错
 	If $remotesize And $remotesize <> FileGetSize($localfile) Then ; 文件大小不对，下载出错
-		Return SetError(3, "", $size & "|" & $remotesize & "|1||3|已下载的 Google Chrome 文件大小不正确") ; 已下载的文件大小不正确
+		Return SetError(3, 0, $size & "|" & $remotesize & "|1||3|已下载的 Google Chrome 文件大小不正确") ; 已下载的文件大小不正确
 	Else
-		Return SetError(0, "", $size & "|" & $remotesize & "|1|1||Google Chrome 下载完成")
+		Return SetError(0, 0, $size & "|" & $remotesize & "|1|1||Google Chrome 下载完成")
 	EndIf
 EndFunc   ;==>__DownloadChrome
 #EndRegion DownloadChrome
@@ -1895,7 +1962,7 @@ EndFunc   ;==>CreateThread
 Func InstallChrome($ChromeInstaller = "")
 	$ChromePath = FullPath($ChromePath)
 	SplitPath($ChromePath, $ChromeDir, $ChromeExe)
-	Local $TempDir = $ChromeDir & "\~Update"
+	Local $TempDir = $ChromeDir & "\~update"
 	If Not FileExists($TempDir) Then DirCreate($TempDir)
 	If $ChromeInstaller = "" Then $ChromeInstaller = $TempDir & "\chrome_installer.exe"
 
@@ -1936,38 +2003,42 @@ Func InstallChrome($ChromeInstaller = "")
 
 	If Not FileExists($TempDir & "\Chrome-bin\chrome.exe") Or Not FileExists($TempDir & "\Chrome-bin\" & $latest & "\chrome.dll") Then
 		MsgBox(64, "更新错误-MyChrome", "提取 Google Chrome 程序文件失败！", 0, $hSettings)
-		Return SetError(1, "", 0) ; 解压错误
+		Return SetError(1, 0, 0) ; 解压错误
 	EndIf
 
+	FileMove($TempDir & "\Chrome-bin\*.*", $TempDir & "\Chrome-bin\" & $latest & "\", 9)
+	DirRemove($ChromeDir & "\~updated", 1)
+	DirMove($TempDir & "\Chrome-bin\" & $latest, $ChromeDir & "\~updated", 1)
+
 	; 复制程序文件
-	WaitChromeClose($ChromePath, "请关闭 Google Chrome 浏览器以便完成更新！") ;~ 等待 chrome 浏览器关闭
+	$ChromeIsRunning = ChromeIsRunning($ChromePath, '请关闭 Chrome 浏览器以便完成更新，或者点击“取消”推迟到下次启动时应用更新。')
+	If $ChromeIsRunning Then Return
+	Return ApplyUpdate() ; 返回版本号
+EndFunc   ;==>InstallChrome
+
+
+Func ApplyUpdate()
 	If IsHWnd($hSettings) Then
-		_GUICtrlStatusBar_SetText($hStausbar, "正在安装 Google Chrome 更新...")
-	Else
-		TrayTip("Google Chrome 更新", "正在安装 Google Chrome 更新...", 5, 1)
+		_GUICtrlStatusBar_SetText($hStausbar, "正在应用浏览器更新...")
+	ElseIf @TrayIconVisible Then
+		TrayTip("Google Chrome 更新", "正在应用浏览器更新...", 5, 1)
 	EndIf
-	DirCopy($TempDir & "\Chrome-bin\" & $latest, $ChromeDir, 1)
-	DirRemove($TempDir & "\Chrome-bin\" & $latest, 1)
-	DirCopy($TempDir & "\Chrome-bin", $ChromeDir, 1)
+	FileMove($ChromeDir & "\~updated\*.*", $ChromeDir, 9)
+	DirCopy($ChromeDir & "\~updated", $ChromeDir, 1)
+	; 如果设定的chrome程序文件路径不以chrome.exe结尾，则认为使用者将其改名，将chrome.exe重命名为设定的文件名
+	If StringRegExpReplace($ChromePath, ".*\\", "") <> "chrome.exe" Then
+		FileMove($ChromeDir & "\chrome.exe", $ChromePath, 1)
+	EndIf
 	Local $chromedll = $ChromeDir & "\chrome.dll"
 	$ChromeFileVersion = FileGetVersion($chromedll, "FileVersion")
 	$ChromeLastChange = FileGetVersion($chromedll, "LastChange")
 	If IsHWnd($hSettings) Then
 		GUICtrlSetData($hCurrentVer, $ChromeFileVersion & "  " & $ChromeLastChange)
 	EndIf
-
-	If $ChromeFileVersion <> $latest Then
-		MsgBox(64, "更新错误-MyChrome", "安装 Google Chrome 更新失败！", 0, $hSettings)
-		Return SetError(2, "", 0)
-	Else
-		; 如果设定的chrome程序文件路径不以chrome.exe结尾，则认为使用者将其改名，将chrome.exe重命名为设定的文件名
-		If StringRegExpReplace($ChromePath, ".*\\", "") <> "chrome.exe" Then
-			FileMove($ChromeDir & "\chrome.exe", $ChromePath, 1)
-		EndIf
-		MsgBox(64, "MyChrome", "Google Chrome 浏览器已更新至 " & $ChromeFileVersion & " (" & $ChromeLastChange & ") !", 0, $hSettings)
-		Return SetError(0, "", $ChromeFileVersion) ; 返回版本号
-	EndIf
-EndFunc   ;==>InstallChrome
+	MsgBox(64, "MyChrome", "Google Chrome 浏览器已更新至 " & $ChromeFileVersion & " (" & $ChromeLastChange & ") !", 0, $hSettings)
+	DirRemove($ChromeDir & "\~updated", 1)
+	Return $ChromeFileVersion ; 返回版本号
+EndFunc   ;==>ApplyUpdate
 
 ;~ 显示托盘气泡提示
 Func TrayTipProgress()
@@ -1982,15 +2053,9 @@ Func EndUpdate()
 
 	; 检查是否有另一个 MyChrome 进程正在更新 Chrome，
 	If Not ChromeIsUpdating($ChromeDir) Then
-		Local $TempDir = $ChromeDir & "\~Update"
+		Local $TempDir = $ChromeDir & "\~update"
 		If FileExists($TempDir) Then
-			FileDelete($TempDir & "\Update.ini")
-			FileDelete($TempDir & "\7z.exe")
-			FileDelete($TempDir & "\7z.dll")
-			FileDelete($TempDir & "\chrome_installer.exe")
-			FileDelete($TempDir & "\chrome.7z")
-			DirRemove($TempDir & "\Chrome-bin", 1)
-			DirRemove($TempDir, 0) ; 如果此文件夹中没有其它文件则删除
+			DirRemove($TempDir, 1) ; 如果此文件夹中没有其它文件则删除
 		EndIf
 	EndIf
 
@@ -1999,7 +2064,7 @@ Func EndUpdate()
 		GUICtrlSetTip($hCheckUpdate, "检查浏览器更新" & @CRLF & "下载最新版至 chrome 程序文件夹")
 		GUICtrlSetState($hSettingsOK, $GUI_ENABLE)
 		GUICtrlSetState($hSettingsApply, $GUI_ENABLE)
-		_GUICtrlStatusBar_SetText($hStausbar, '双击软件目录下的 "' & $AppName & '设置.vbs" 文件可调出此窗口')
+		_GUICtrlStatusBar_SetText($hStausbar, '双击软件目录下的 "' & $AppName & '.vbs" 文件可调出此窗口')
 	EndIf
 	$IsUpdating = 0
 EndFunc   ;==>EndUpdate
@@ -2093,7 +2158,7 @@ EndFunc   ;==>FullPath
 ;~ 判断是否有另一个 MyChrome 进程正在更新当前的 chrome
 ;~ 本程序是否正在更新 chrome 由 $IsUpdating 判断
 Func ChromeIsUpdating($dir)
-	Local $UpdateIni = $dir & "\~Update\Update.ini"
+	Local $UpdateIni = $dir & "\~update\Update.ini"
 	If Not FileExists($UpdateIni) Then Return
 
 	Local $pid = IniRead($UpdateIni, "general", "pid", "")
@@ -2107,7 +2172,7 @@ Func AppIsRunning($AppPath)
 	Local $exe = StringRegExpReplace($AppPath, '.*\\', '')
 	Local $list = ProcessList($exe)
 	For $i = 1 To $list[0][0]
-		If StringInStr(_GetProcPath($list[$i][1]), $AppPath) Then
+		If StringInStr(GetProcPath($list[$i][1]), $AppPath) Then
 			Return $list[$i][1]
 		EndIf
 	Next
@@ -2115,37 +2180,35 @@ Func AppIsRunning($AppPath)
 EndFunc   ;==>AppIsRunning
 
 ;~ 等待 chrome 浏览器关闭
-Func WaitChromeClose($App = "chrome.exe", $msg = "请关闭 Google Chrome 浏览器后继续！")
-	Local $exe = StringRegExpReplace($App, '.*\\', '')
-	Local $list, $pid, $i, $var
+Func ChromeIsRunning($AppPath = "chrome.exe", $msg = "请关闭 Google Chrome 浏览器后继续！")
+	If Not AppIsRunning($AppPath) Then Return 0
 	Dim $hSettings
+	$var = MsgBoxE(52, 'MyChrome', $msg, 0, $hSettings, '强制关闭', '取消')
+	If $var <> 6 Then Return 1
 
-	While 1
-		If Not AppIsRunning($App) Then Return
-
-		$var = MsgBoxE(52, 'MyChrome', $msg, 0, $hSettings, '确定', '强制关闭')
-		If $var = 6 Then ContinueLoop
-
+	$exe = StringRegExpReplace($AppPath, '.*\\', '')
+	For $j = 1 To 20
 		; close chrome
 		$list = WinList("[REGEXPCLASS:(?i)Chrome]")
 		For $i = 1 To $list[0][0]
 			$pid = WinGetProcess($list[$i][1])
-			If StringInStr(_GetProcPath($pid), $App) Then
+			If StringInStr(GetProcPath($pid), $AppPath) Then
 				WinClose($list[$i][1])
 				WinWaitClose($list[$i][1], "", 2)
 			EndIf
 		Next
-
 		; kill chrome processes
 		Sleep(1000)
 		$list = ProcessList($exe)
 		For $i = 1 To $list[0][0]
-			If StringInStr(_GetProcPath($list[$i][1]), $App) Then
+			If StringInStr(GetProcPath($list[$i][1]), $AppPath) Then
 				ProcessClose($list[$i][1])
 			EndIf
 		Next
-	WEnd
-EndFunc   ;==>WaitChromeClose
+		If Not AppIsRunning($AppPath) Then Return 0
+	Next
+	Return 1
+EndFunc   ;==>ChromeIsRunning
 
 
 ; #FUNCTION# ;===============================================================================
@@ -2162,7 +2225,7 @@ EndFunc   ;==>WaitChromeClose
 Func HttpParseUrl($url)
 	Local $host, $page, $port, $aResults[3]
 	Local $match = StringRegExp($url, '(?i)^https?://([^/]+)(/?.*)', 1)
-	If @error Then Return SetError(1, "", $aResults)
+	If @error Then Return SetError(1, 0, $aResults)
 	$aResults[0] = $match[0] ; host
 	$aResults[1] = $match[1] ; page
 	If $aResults[1] = "" Then $aResults[1] = "/"
@@ -2171,7 +2234,7 @@ Func HttpParseUrl($url)
 	Else
 		$aResults[2] = 80
 	EndIf
-	Return SetError(0, "", $aResults)
+	Return SetError(0, 0, $aResults)
 EndFunc   ;==>HttpParseUrl
 
 ; #FUNCTION# ====================================================================================================================
@@ -2416,15 +2479,15 @@ EndFunc   ;==>_ProcessGetChildren
 
 ; #FUNCTION# ;===============================================================================
 ; 参考 http://www.autoitscript.com/forum/topic/63947-read-full-exe-path-of-a-known-windowprogram/
-; Name...........: _GetProcPath
+; Name...........: GetProcPath
 ; Description ...: 取得进程路径
-; Syntax.........: _GetProcPath($Process_PID)
+; Syntax.........: GetProcPath($Process_PID)
 ; Parameters ....: $Process_PID - 进程的 pid
 ; Return values .: Success - 完整路径
 ;                  Failure - set @error
 ;============================================================================================
-Func _GetProcPath($pid = @AutoItPID)
-	If @OSArch <> "X86" And Not _WinAPI_IsWow64Process($pid) Then ; much slow than dllcall method
+Func GetProcPath($pid = @AutoItPID)
+	If @OSArch <> "X86" And Not @AutoItX64 And Not _WinAPI_IsWow64Process($pid) Then ; much slow than dllcall method
 		Local $colItems = ""
 		Local $objWMIService = ObjGet("winmgmts:\\localhost\root\CIMV2")
 		$colItems = $objWMIService.ExecQuery("SELECT * FROM Win32_Process WHERE ProcessId = " & $pid, "WQL", _
@@ -2442,7 +2505,77 @@ Func _GetProcPath($pid = @AutoItPID)
 		If (@error) Or (Not $ret[0]) Then Return SetError(1, 0, '')
 		Return $ret[3]
 	EndIf
-EndFunc   ;==>_GetProcPath
+EndFunc   ;==>GetProcPath
+
+; #FUNCTION# ====================================================================================================================
+; Name ..........: _IsUACAdmin
+; Description ...: Determines if process has Admin privileges and whether running under UAC.
+; Syntax ........: _IsUACAdmin()
+; Parameters ....: None
+; Return values .: Success          - 1 - User has full Admin rights (Elevated Admin w/ UAC)
+;                  Failure          - 0 - User is not an Admin, sets @extended:
+;                                   | 0 - User cannot elevate
+;                                   | 1 - User can elevate
+; Author ........: Erik Pilsits
+; Modified ......:
+; Remarks .......: THE GOOD STUFF: returns 0 w/ @extended = 1 > UAC Protected Admin
+; Related .......:
+; Link ..........:
+; Example .......: No
+; ===============================================================================================================================
+Func _IsUACAdmin()
+	If StringRegExp(@OSVersion, "_(XP|2003)") Or RegRead("HKLM64\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA") <> 1 Then
+		Return SetExtended(0, IsAdmin())
+	EndIf
+
+	Local $hToken = _Security__OpenProcessToken(_WinAPI_GetCurrentProcess(), $TOKEN_QUERY)
+	Local $tTI = _Security__GetTokenInformation($hToken, $TOKENGROUPS)
+	_WinAPI_CloseHandle($hToken)
+
+	Local $pTI = DllStructGetPtr($tTI)
+	Local $cbSIDATTR = DllStructGetSize(DllStructCreate("ptr;dword"))
+	Local $count = DllStructGetData(DllStructCreate("dword", $pTI), 1)
+	Local $pGROUP1 = DllStructGetPtr(DllStructCreate("dword;STRUCT;ptr;dword;ENDSTRUCT", $pTI), 2)
+	Local $tGROUP, $sGROUP = ""
+
+	; S-1-5-32-544 > BUILTINAdministrators > $SID_ADMINISTRATORS
+	; S-1-16-8192  > Mandatory LabelMedium Mandatory Level (Protected Admin) > $SID_MEDIUM_MANDATORY_LEVEL
+	; S-1-16-12288 > Mandatory LabelHigh Mandatory Level (Elevated Admin) > $SID_HIGH_MANDATORY_LEVEL
+	; SE_GROUP_USE_FOR_DENY_ONLY = 0x10
+
+	Local $inAdminGrp = False, $denyAdmin = False, $elevatedAdmin = False, $sSID
+	For $i = 0 To $count - 1
+		$tGROUP = DllStructCreate("ptr;dword", $pGROUP1 + ($cbSIDATTR * $i))
+		$sSID = _Security__SidToStringSid(DllStructGetData($tGROUP, 1))
+		If StringInStr($sSID, "S-1-5-32-544") Then ; member of Administrators group
+			$inAdminGrp = True
+			; check for deny attribute
+			If (BitAND(DllStructGetData($tGROUP, 2), 0x10) = 0x10) Then $denyAdmin = True
+		ElseIf StringInStr($sSID, "S-1-16-12288") Then
+			$elevatedAdmin = True
+		EndIf
+	Next
+
+	If $inAdminGrp Then
+		; check elevated
+		If $elevatedAdmin Then
+			; check deny status
+			If $denyAdmin Then
+				; protected Admin CANNOT elevate
+				Return SetExtended(0, 0)
+			Else
+				; elevated Admin
+				Return SetExtended(1, 1)
+			EndIf
+		Else
+			; protected Admin
+			Return SetExtended(1, 0)
+		EndIf
+	Else
+		; not an Admin
+		Return SetExtended(0, 0)
+	EndIf
+EndFunc   ;==>_IsUACAdmin
 
 Func VersionCompare($v1, $v2)
 	Local $i, $c1, $c2, $a1, $a2
@@ -2468,4 +2601,3 @@ Func VersionCompare($v1, $v2)
 	Next
 	Return False
 EndFunc   ;==>VersionCompare
-
