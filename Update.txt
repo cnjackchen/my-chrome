@@ -1,5 +1,14 @@
-2.9.2
-http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.2.zip
-1）修正对Canary 64位版本的支持。新增“Canary-x86”分支为32位版本，原“Canary”分支则根据您的系统构架由Google服务器确定32或64位版本。
-2）修正外部程序参数中带“|”符号会出错的问题，修正其它小问题。
+latest=2.9.3
+url=http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.3.zip
+update=1）按操作系统自动选择 32-bit 或 64-bit 浏览器，64-bit Win 7 以上系统优先下载 64-bit Chrome。目前 Google 已推送的 64-bit 分支包括：Chromium-Continuous，Canary，DEV 等。\n2）如果在设置中选择"32-bit (x86)"，则忽略操作系统区别，只下载 32-bit 浏览器。\n3）MyChrome设置快捷方式改为"MyChrome.vbs"（去掉设置二字）。
+
+latest_x64=2.9.3
+url_x64=http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.3_x64.zip
+update_x64=1）按操作系统自动选择 32-bit 或 64-bit 浏览器，64-bit Win 7 以上系统优先下载 64-bit Chrome。目前 Google 已推送的 64-bit 分支包括：Chromium-Continuous，Canary，DEV 等。\n2）如果在设置中选择"32-bit (x86)"，则忽略操作系统区别，只下载 32-bit 浏览器。\n3）MyChrome设置快捷方式改为"MyChrome.vbs"（去掉设置二字）。
+
+2.9.3
+http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.3.zip
+1）按操作系统自动选择 32-bit 或 64-bit 浏览器，64-bit Win 7 以上系统优先下载 64-bit Chrome。目前 Google 已推送的 64-bit 分支包括：Chromium-Continuous，Canary，DEV 等。
+2）如果在设置中选择"32-bit (x86)"，则忽略操作系统区别，只下载 32-bit 浏览器。
+3）MyChrome设置快捷方式改为"MyChrome.vbs"（去掉设置二字）。
 
