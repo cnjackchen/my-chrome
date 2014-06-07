@@ -1,5 +1,10 @@
 #summary 更新历史
 
+*2014.06.07 v2.9.3*
+ * 按操作系统自动选择 32-bit 或 64-bit 浏览器，64-bit Win 7 以上系统优先下载 64-bit Chrome。目前 Google 已推送的 64-bit 分支包括：Chromium-Continuous，Canary，DEV 等。
+ * 如果在设置中选择"32-bit (x86)"，则忽略操作系统区别，只下载 32-bit 浏览器。
+ * MyChrome设置快捷方式改为"MyChrome.vbs"（去掉设置二字）。
+
 *2014.05.01 v2.9.2*
  * 修正对Canary 64 位版本的支持。新增“Canary-x86”分支为32位版本，原“Canary”分支则根据您的系统构架由Google服务器确定32或64位版本。
  * 修正外部程序参数中带“|”符号会出错的问题，修正些其它小问题。
