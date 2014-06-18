@@ -1,9 +1,11 @@
-﻿#NoTrayIcon
+#NoTrayIcon
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=Icon_1.ico
+#AutoIt3Wrapper_Compile_Both=y
+#AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Comment=可自动更新的 Google Chrome 便携版
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=2.9.3.0
+#AutoIt3Wrapper_Res_Fileversion=2.9.4.0
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -42,7 +44,7 @@ Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "2.9.3" ; MyChrome version
+Global Const $AppVersion = "2.9.4" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
 Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome, $x86 = 0
@@ -94,7 +96,7 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "CacheDir", "")
 	IniWrite($inifile, "Settings", "CacheSize", 0)
 	IniWrite($inifile, "Settings", "Channel", "Stable")
-	IniWrite($inifile, "Settings", "x86", 0)
+	IniWrite($inifile, "Settings", "x86", 1)
 	IniWrite($inifile, "Settings", "LastCheckUpdate", "2014/05/01 00:00:00")
 	IniWrite($inifile, "Settings", "UpdateInterval", 24)
 	IniWrite($inifile, "Settings", "AskBeforeUpdateChrome", 1) ; 1 - 更新前询问
@@ -117,7 +119,7 @@ $UserDataDir = IniRead($inifile, "Settings", "UserDataDir", ".\User Data")
 $CacheDir = IniRead($inifile, "Settings", "CacheDir", "")
 $CacheSize = IniRead($inifile, "Settings", "CacheSize", 0) * 1
 $Channel = IniRead($inifile, "Settings", "Channel", "Stable")
-$x86 = IniRead($inifile, "Settings", "x86", 0) * 1
+$x86 = IniRead($inifile, "Settings", "x86", 1) * 1
 $LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2014/01/01 00:00:00")
 $UpdateInterval = IniRead($inifile, "Settings", "UpdateInterval", 24)
 $AskBeforeUpdateChrome = IniRead($inifile, "Settings", "AskBeforeUpdateChrome", 1) * 1
@@ -148,17 +150,8 @@ If $AppVersion <> IniRead($inifile, "Settings", "AppVersion", "") Then
 		$Channel = StringTrimRight($Channel, 4)
 		IniWrite($inifile, "Settings", "Channel", $Channel)
 	EndIf
-	MsgBox(64, 'MyChrome', 'MyChrome ' & $AppVersion & ' 新特性：' & @CRLF & @CRLF & _
-			'1）按操作系统自动选择 32-bit 或 64-bit 浏览器，64-bit Win 7 以上系统优先下载 64-bit Chrome。' & @CRLF & _
-			'目前 Google 已推送的 64-bit 分支包括：Chromium-Continuous，Canary，DEV 等。' & @CRLF & _
-			'2）如果在设置中选择"32-bit (x86)"，则忽略操作系统区别，只下载 32-bit 浏览器。' & @CRLF & _
-			'3）MyChrome设置快捷方式改为"MyChrome.vbs"（去掉设置二字）。')
 EndIf
 #EndRegion ========= 兼容旧版 MyChrome =========
-
-If $EnableProxy Then
-	HttpSetProxy(2, $ProxySever & ":" & $ProxyPort)
-EndIf
 
 Opt("ExpandEnvStrings", 1)
 EnvSet("APP", @ScriptDir)
@@ -573,7 +566,11 @@ Func CheckAppUpdate()
 	EndIf
 	$LastCheckAppUpdate = _NowCalc()
 	IniWrite($inifile, "Settings", "LastCheckAppUpdate", $LastCheckAppUpdate)
-
+	If $EnableProxy Then
+		HttpSetProxy(2, $ProxySever & ":" & $ProxyPort)
+	Else
+		HttpSetProxy(0)
+	EndIf
 	$var = BinaryToString(InetRead("http://my-chrome.googlecode.com/svn/Update.txt", 27), 4)
 	$var = StringStripWS($var, 3) ; 去掉开头、结尾的空字符
 	$match = StringRegExp($var, '(?im)^' & $slatest & '=(\S+)', 1)
@@ -698,7 +695,7 @@ Func Settings()
 	GUICtrlSetOnEvent(-1, "ShowUrl")
 
 	GUICtrlCreateLabel("当前版本：", 280, 235, 70, 20)
-	$hCurrentVer = GUICtrlCreateLabel("", 355, 235, 140, 20)
+	$hCurrentVer = GUICtrlCreateLabel("", 350, 235, 140, 20)
 	GUICtrlSetData(-1, $ChromeFileVersion & "  " & $ChromeLastChange)
 
 	GUICtrlCreateLabel("发现新版本时", 20, 235, 110, 20)
@@ -783,7 +780,7 @@ Func Settings()
 		GUICtrlSetState($hProxySever, $GUI_DISABLE)
 		GUICtrlSetState($hProxyPort, $GUI_DISABLE)
 	EndIf
-	SetProxy()
+;~ 	SetProxy()
 
 	; 外部程序
 	GUICtrlCreateTabItem("外部程序")
@@ -857,7 +854,11 @@ Func Change_Browser_Bit()
 	Else
 		$x86 = 0
 	EndIf
-	ShowLatestChromeVer()
+	If $IsUpdating Then Return
+	If ProcessExists($iThreadPid) Then
+		_KillThread($iThreadPid)
+	EndIf
+	AdlibRegister("ShowLatestChromeVer", 10)
 EndFunc   ;==>Change_Browser_Bit
 
 Func AddExApp()
@@ -1163,6 +1164,7 @@ Func ShowLatestChromeVer()
 
 	_SetVar("DLInfo", "|||||")
 	_SetVar("ResponseTimer", TimerInit())
+
 	If $EnableProxy = 1 Then
 		$iThreadPid = _StartThread("GetLatestVersion", $Channel, $x86, $ProxySever, $ProxyPort)
 	Else
@@ -1251,21 +1253,15 @@ EndFunc   ;==>Start_End_ChromeUpdate
 ;~ 下载更新代理服务器选项
 Func SetProxy()
 	If GUICtrlRead($hEnableProxy) = $GUI_CHECKED Then
-		If $EnableProxy <> 1 Then
-			$EnableProxy = 1
-			GUICtrlSetState($hProxySever, $GUI_ENABLE)
-			GUICtrlSetState($hProxyPort, $GUI_ENABLE)
-		EndIf
+		$EnableProxy = 1
+		GUICtrlSetState($hProxySever, $GUI_ENABLE)
+		GUICtrlSetState($hProxyPort, $GUI_ENABLE)
 		$ProxySever = GUICtrlRead($hProxySever)
 		$ProxyPort = GUICtrlRead($hProxyPort)
-		HttpSetProxy(2, $ProxySever & ":" & $ProxyPort) ; 代理服务器
 	Else
-		If $EnableProxy <> 0 Then
-			$EnableProxy = 0
-			GUICtrlSetState($hProxySever, $GUI_DISABLE)
-			GUICtrlSetState($hProxyPort, $GUI_DISABLE)
-		EndIf
-		HttpSetProxy(0) ; 无代理
+		$EnableProxy = 0
+		GUICtrlSetState($hProxySever, $GUI_DISABLE)
+		GUICtrlSetState($hProxyPort, $GUI_DISABLE)
 	EndIf
 EndFunc   ;==>SetProxy
 
@@ -1484,8 +1480,10 @@ EndFunc   ;==>CancelUpdate
 ;~ 5 - The extended value for the download. The value is arbitrary and is primarily only useful to the AutoIt developers.
 ;~ 从网络获取 chrome 最新版本号
 Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
-	Local $urlbase, $var, $LatestVer, $LatestUrl, $i, $j
+	Local $urlbase, $var, $LatestVer, $LatestUrl, $i
+	Local $WinVer = WinVer()
 	Local $OSArch = StringLower(@OSArch)
+	$x86 = $x86 * 1
 	AdlibRegister("ResetTimer", 1000) ; 定时向父进程发送时间信息（响应信息）
 
 ;~ 	for test only
@@ -1494,53 +1492,57 @@ Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 ;~ 	EndIf
 ;~ 	for test only
 
+	Local $hHTTPOpen, $hConnect, $version, $name, $a, $hRequest, $sHeader, $error
+	If $ProxySever <> "" And $ProxyPort <> "" Then
+		$hHTTPOpen = _WinHttpOpen(Default, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $ProxySever & ":" & $ProxyPort, "localhost")
+	Else
+		$hHTTPOpen = _WinHttpOpen() ; 无代理
+	EndIf
+	_WinHttpSetTimeouts($hHTTPOpen, 0, 7000, 7000, 7000) ; 设置超时
+
 	; get latest Chromium developer build
+	; https://storage.googleapis.com/chromium-browser-continuous/index.html?path=Win/
+	; https://storage.googleapis.com/chromium-browser-continuous/index.html?path=Win_x64/
 	If StringInStr($Channel, "Chromium") Then
-		If $ProxySever <> "" And $ProxyPort <> "" Then
-			HttpSetProxy(2, $ProxySever & ":" & $ProxyPort)
-		EndIf
+		Local $arr[4] = ["https://storage.googleapis.com", "https://storage.googleapis.com", _
+				"https://storage.googleapis.com", "https://storage.googleapis.com"]
 		If $Channel = "Chromium-Continuous" Then
 			If $x86 Or $OSArch = "x86" Then
-				$urlbase = "http://storage.googleapis.com/chromium-browser-continuous/Win/"
+				$urlbase = "chromium-browser-continuous/Win"
 			Else
-				$urlbase = "http://storage.googleapis.com/chromium-browser-continuous/Win_x64/"
+				$urlbase = "chromium-browser-continuous/Win_x64"
 			EndIf
 		Else
-			$urlbase = "http://storage.googleapis.com/chromium-browser-snapshots/Win/"
+			$urlbase = "chromium-browser-snapshots/Win"
 		EndIf
-		For $i = 1 To 2
-			_SetVar("DLInfo", "|||||从服务器获取 Chromium 更新信息... 第 " & $i & " 次尝试")
-			$var = BinaryToString(InetRead($urlbase & "LAST_CHANGE", 16))
-			If StringIsDigit($var) Then ExitLoop
+		For $i = 0 To UBound($arr) - 1
+			_SetVar("DLInfo", "|||||从服务器获取 Chromium 更新信息... 第 " & $i + 1 & " 次尝试")
+			$hConnect = _WinHttpConnect($hHTTPOpen, $arr[$i])
+			$var = _WinHttpSimpleSSLRequest($hConnect, "GET", $urlbase & "/LAST_CHANGE")
+			_WinHttpCloseHandle($hConnect)
+			If StringIsDigit($var) And $var > 0 Then
+				$LatestVer = $var
+				$LatestUrl = $arr[$i] & "/" & $urlbase & "/" & $var & "/mini_installer.exe"
+				ExitLoop
+			EndIf
 			Sleep(200)
 		Next
-
-		If Not StringIsDigit($var) Then ; try https
-			$urlbase = StringReplace($urlbase, "http://", "https://")
-			For $i = 1 To 2
-				_SetVar("DLInfo", "|||||从服务器获取 Chromium 更新信息... 第 " & $i + 2 & " 次尝试")
-				$var = BinaryToString(InetRead($urlbase & "LAST_CHANGE", 16))
-				If StringIsDigit($var) Then ExitLoop
-				Sleep(200)
-			Next
-		EndIf
-
-		If Not StringIsDigit($var) Then
+		_WinHttpCloseHandle($hHTTPOpen)
+		If $LatestVer Then
+			_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Chromium 更新信息")
+		Else
 			_SetVar("DLInfo", "||1||1|获取 Chromium 更新信息失败，请检查网络连接，稍后再试。")
-			Return
 		EndIf
-		$LatestVer = $var
-		$LatestUrl = $urlbase & $LatestVer & "/mini_installer.exe"
-		_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Chromium 更新信息")
 		Return
 	EndIf
 
 	; 利用 Google Update API 获取 stable/beta/dev/canary 最新版本号 http://code.google.com/p/omaha/wiki/ServerProtocol
-	Local $appid, $ap, $data, $match
+	Local $appid, $id, $ap, $data, $match
 	Switch $Channel
 		Case "Stable"
-			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
-			If $x86 Or $OSArch = "x86" Then
+			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D" ; protocol v3
+			$id = "8A69D345-D564-463C-AFF1-A69D9E530F96" ; ; protocol v2
+			If $x86 Or $OSArch = "x86" Or $WinVer < 6.1 Then
 				$ap = "-multi-chrome"
 				$OSArch = "x86"
 			Else
@@ -1548,7 +1550,8 @@ Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 			EndIf
 		Case "Beta"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
-			If $x86 Or $OSArch = "x86" Then
+			$id = "8A69D345-D564-463C-AFF1-A69D9E530F96"
+			If $x86 Or $OSArch = "x86" Or $WinVer < 6.1 Then
 				$ap = "1.1-beta"
 				$OSArch = "x86"
 			Else
@@ -1556,85 +1559,90 @@ Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 			EndIf
 		Case "Dev"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
-			If $x86 Or $OSArch = "x86" Then
+			$id = "8A69D345-D564-463C-AFF1-A69D9E530F96"
+			If $x86 Or $OSArch = "x86" Or $WinVer < 6.1 Then
 				$ap = "2.0-dev"
 				$OSArch = "x86"
 			Else
-				$ap = "2.0-dev-x64-dev-multi-chrome"
+				$ap = "x64-dev-multi-chrome"
 			EndIf
 		Case "Canary"
 			$appid = "4EA16AC7-FD5A-47C3-875B-DBF4A2008C20"
-			If $x86 Or $OSArch = "x86" Then
+			$id = "4ea16ac7-fd5a-47c3-875b-dbf4a2008c20"
+			If $x86 Or $OSArch = "x86" Or $WinVer < 6.1 Then
 				$ap = ""
 				$OSArch = "x86"
 			Else
 				$ap = "x64-canary"
 			EndIf
 	EndSwitch
+
+	; omaha protocol v3
 	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.23.9" shell_version="1.3.21.103" ismachine="0" ' & _
 			'sessionid="{3597644B-2952-4F92-AE55-D315F45F80A5}" installsource="ondemandcheckforupdate" ' & _
-			'requestid="{CD7523AD-A40D-49F4-AEEF-8C114B804658}" dedup="cr"><os platform="win" version="' & WinVer() & '" ' & _
+			'requestid="{CD7523AD-A40D-49F4-AEEF-8C114B804658}" dedup="cr"><os platform="win" version="' & $WinVer & '" ' & _
 			'sp="' & @OSServicePack & '" arch="' & $OSArch & '"/><app appid="{' & $appid & '}" version="" nextversion="" ' & _
-			'ap="' & $ap & '" lang="" brand="GGLS" client=""><updatecheck/><ping active="1" ad="2665" rd="2665"/></app></request>'
+			'ap="' & $ap & '" lang="" brand="GGLS" client=""><updatecheck/></app></request>'
 
-	Local $hHTTPOpen, $hConnect, $version, $name, $a, $hRequest, $sHeader, $error
-
-	If $ProxySever <> "" And $ProxyPort <> "" Then
-		$hHTTPOpen = _WinHttpOpen(Default, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $ProxySever & ":" & $ProxyPort, "localhost")
-	Else
-		$hHTTPOpen = _WinHttpOpen() ; 无代理
-	EndIf
-	_WinHttpSetTimeouts($hHTTPOpen, 0, 5000, 5000, 5000) ; 设置超时
-	For $i = 1 To 3
-		_SetVar("DLInfo", "|||||正在连接 Chrome 更新服务器... 第 " & $i & " 次尝试")
-;~ 		$hConnect = _WinHttpConnect($hHTTPOpen, "clients2.google.com", 80)
-;~ 		$hConnect = _WinHttpConnect($hHTTPOpen, "clients4.google.com", 80)
-		$hConnect = _WinHttpConnect($hHTTPOpen, "tools.google.com", 80)
-		_SetVar("DLInfo", "|||||从服务器获取 Chrome 更新信息... 第 " & $i & " 次尝试")
-		$var = _WinHttpSimpleRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.23.9;winhttp")
+	Local $arr[3] = ["https://tools.google.com", "https://tools.google.com", "https://clients2.google.com"]
+	For $i = 0 To UBound($arr) - 1
+		_SetVar("DLInfo", "|||||从服务器获取 Chrome 更新信息... 第 " & $i + 1 & " 次尝试")
+		$hConnect = _WinHttpConnect($hHTTPOpen, $arr[$i])
+		$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.23.9;winhttp")
 		_WinHttpCloseHandle($hConnect)
 		$match = StringRegExp($var, '(?i)<manifest +version="(.+?)".* name="(.+?)"', 1)
 		$error = @error
 		If Not $error Then ExitLoop
 		Sleep(200)
 	Next
-	If $error Then
-		_SetVar("DLInfo", "||1||1|获取 Chrome 更新信息失败，请检查网络连接，稍后再试。") ; 无法获取更新地址
-	Else
+	If Not $error Then
 		$version = $match[0]
 		$name = $match[1]
 		$match = StringRegExp($var, '(?i)<url +codebase="(.+?)"', 3)
-		If @error Then
-			_SetVar("DLInfo", "||1||1|解析 Chrome 下载地址出错。若错误反复出现，请向软件作者反馈。") ; 无法获取更新地址
-		Else
+		If Not @error Then
 			For $i = 0 To UBound($match) - 1
 				_SetVar("DLInfo", "|||||尝试连接 " & $match[$i] & $name)
 				$a = HttpParseUrl($match[$i] & $name)
-				For $j = 1 To 2
-					$hConnect = _WinHttpConnect($hHTTPOpen, $a[0], $a[2])
-					$hRequest = _WinHttpOpenRequest($hConnect, Default, $a[1])
-					_WinHttpSendRequest($hRequest)
-					_WinHttpReceiveResponse($hRequest)
-					$sHeader = _WinHttpQueryHeaders($hRequest, $WINHTTP_QUERY_STATUS_CODE)
-					_WinHttpCloseHandle($hRequest)
-					_WinHttpCloseHandle($hConnect)
-					If $sHeader = 200 Then ExitLoop
-					Sleep(100)
-				Next
+				$hConnect = _WinHttpConnect($hHTTPOpen, $a[0], $a[2])
+				$hRequest = _WinHttpOpenRequest($hConnect, Default, $a[1])
+				_WinHttpSendRequest($hRequest)
+				_WinHttpReceiveResponse($hRequest)
+				$sHeader = _WinHttpQueryHeaders($hRequest, $WINHTTP_QUERY_STATUS_CODE)
+				_WinHttpCloseHandle($hRequest)
+				_WinHttpCloseHandle($hConnect)
 				If $sHeader = 200 Then
-					_WinHttpCloseHandle($hHTTPOpen)
 					$LatestVer = $version
 					$LatestUrl = $match[$i] & $name
-					_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Chrome 更新信息")
-					Return
+					ExitLoop
 				EndIf
 			Next
-			If Not $LatestVer Then
-				_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1||2|已获取的 Chrome 下载地址无法连接，请稍后再试。")
-			EndIf
 		EndIf
 	EndIf
+
+	; omaha protocol v2
+	If Not $LatestVer And ($x86 Or $OSArch = "x86" Or $WinVer < 6.1) Then
+		Local $arr[2] = ["https://clients2.google.com", "https://clients2.google.com"]
+		For $i = 0 To UBound($arr) - 1
+			_SetVar("DLInfo", "|||||从服务器获取 Chrome 更新信息... 第 " & $i + 4 & " 次尝试")
+			$hConnect = _WinHttpConnect($hHTTPOpen, $arr[$i])
+			$var = _WinHttpSimpleSSLRequest($hConnect, "GET", "service/update2/crx?x=id%3D{" & $id & "}%26uc&ap=" & $ap)
+			_WinHttpCloseHandle($hConnect)
+			$match = StringRegExp($var, '(?i)<updatecheck +Version="(.+?)".* codebase="(.+?)"', 1)
+			If Not @error Then
+				$LatestVer = $match[0]
+				$LatestUrl = $match[1]
+				ExitLoop
+			EndIf
+			Sleep(200)
+		Next
+	EndIf
+
 	_WinHttpCloseHandle($hHTTPOpen)
+	If $LatestVer Then
+		_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Chrome 更新信息")
+	Else
+		_SetVar("DLInfo", "||1||1|获取 Chrome 更新信息失败，请检查网络连接，稍后再试。")
+	EndIf
 EndFunc   ;==>GetLatestVersion
 Func ResetTimer() ; 定时向父进程发送时间信息，告诉父进程：我还活着！
 	_SetVar("ResponseTimer", TimerInit())
