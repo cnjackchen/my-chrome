@@ -10,7 +10,7 @@
  * 如果您只是偶尔使用 Chrome 而不希望在系统留下痕迹，可以使用  http://portableapps.com 的引导器[http://portableapps.com/apps/internet/google_chrome_portable Google Chrome Portable ]，它会在后台运行，待浏览器退出后进行一些清理工作。但它不能设为默认浏览器，不能自动更新。
 
 *2、如何调出 MyChrome 图形界面（设置窗口）*
- * MyChrome 正常情况下没有图形界面。只在第一次运行或设置有错误时才会弹出设置窗口。若需要显示设置界面，可在 MyChrome.exe 同一目录下找到 “MyChrome设置.vbs” 文件，双击运行这个文件即可。
+ * MyChrome 正常情况下没有图形界面。只在第一次运行或设置有错误时才会弹出设置窗口。若需要显示设置界面，可在 MyChrome.exe 同一目录下找到 “MyChrome.vbs” 文件，双击运行这个文件即可。
 
 *3、获取 Google Chrome 浏览器程序文件*
  * MyChrome 预设 Chrome 浏览器程序路径为 .\Chrome\chrome.exe，也可以点击“浏览”选择其它位置。可通过以下方法获取 Chrome 浏览器：
@@ -40,11 +40,10 @@ http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器
   * Stable：稳定版、正式版
   * Beta：测试版
   * Dev：开发版
-  * Canary：金丝雀版（按操作系统自动选择32位/64位版本）
-  * Canary-x86：金丝雀版（32位版）
+  * Canary：金丝雀版
   * Chromium-Continuous：人工打包、较稳定的Chromium
-  * Chromium-Continuous-x64：人工打包、较稳定的Chromium（64位版）
   * Chromium-Snapshots：自动打包的Chromium，可能有bug、不稳定
+  * 未勾选32-bit(x86)的情况下，以上分支按操作系统情况自动选择下载32位或64位浏览器，64位Win 7操作系统优先下载64位浏览器。若勾选32-bit(x86)，则下载32位版本。
  * 如果下载更新过程中出错，可能是网络问题（国内访问 google 经常出错并不奇怪），请稍后再试试。
  * 浏览器更新后，在“关于 Google Chrome”界面中仍显示类似“更新失败“这样的信息属正常现象。便携版 Chrome 更新依靠 MyChrome 来完成。
 http://googledrive.com/host/0B21uwFpGQgjNc0lyaUFsM2xOUHc/MyChrome默认浏览器2.png 
