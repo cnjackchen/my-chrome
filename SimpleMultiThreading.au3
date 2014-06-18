@@ -86,13 +86,12 @@ Func _StartThread($function, $p1 = "", $p2 = "", $p3 = "", $p4 = "", $p5 = "", $
 	Local $i, $p, $para
 	For $i = 1 to 10
 		$p = Eval("p" & $i)
-		If $p = "" Then ExitLoop
-		If StringInStr($p, " ") Then ; 带空格的参数加上引号
+		If StringInStr($p, " ") Then ; 甯︾┖鏍肩殑鍙傛暟鍔犱笂寮曞彿
 			$p = '"' & $p & '"'
 		EndIf
 		$para &= ' ' & $p
 	Next
-	$para = StringTrimLeft($para, 1)
+	$para = StringStripWS($para, 3)
 	If @Compiled Then
 		Return Run('"' & @AutoItExe & '" child_thread_by ' & $__hwnd_vars & ' ' & $function & ' ' & $para)
 	Else
