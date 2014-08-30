@@ -5,7 +5,7 @@
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Comment=可自动更新的 Google Chrome 便携版
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=2.9.4.0
+#AutoIt3Wrapper_Res_Fileversion=2.9.5.0
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -44,7 +44,7 @@ Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "2.9.4" ; MyChrome version
+Global Const $AppVersion = "2.9.5" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
 Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome, $x86 = 0
@@ -96,7 +96,7 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "CacheDir", "")
 	IniWrite($inifile, "Settings", "CacheSize", 0)
 	IniWrite($inifile, "Settings", "Channel", "Stable")
-	IniWrite($inifile, "Settings", "x86", 1)
+	IniWrite($inifile, "Settings", "x86", 0)
 	IniWrite($inifile, "Settings", "LastCheckUpdate", "2014/05/01 00:00:00")
 	IniWrite($inifile, "Settings", "UpdateInterval", 24)
 	IniWrite($inifile, "Settings", "AskBeforeUpdateChrome", 1) ; 1 - 更新前询问
@@ -119,7 +119,7 @@ $UserDataDir = IniRead($inifile, "Settings", "UserDataDir", ".\User Data")
 $CacheDir = IniRead($inifile, "Settings", "CacheDir", "")
 $CacheSize = IniRead($inifile, "Settings", "CacheSize", 0) * 1
 $Channel = IniRead($inifile, "Settings", "Channel", "Stable")
-$x86 = IniRead($inifile, "Settings", "x86", 1) * 1
+$x86 = IniRead($inifile, "Settings", "x86", 0) * 1
 $LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2014/01/01 00:00:00")
 $UpdateInterval = IniRead($inifile, "Settings", "UpdateInterval", 24)
 $AskBeforeUpdateChrome = IniRead($inifile, "Settings", "AskBeforeUpdateChrome", 1) * 1
@@ -1546,7 +1546,7 @@ Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 				$ap = "-multi-chrome"
 				$OSArch = "x86"
 			Else
-				$ap = "x64-multi-chrome"
+				$ap = "x64-stable-multi-chrome"
 			EndIf
 		Case "Beta"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
@@ -1555,7 +1555,7 @@ Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 				$ap = "1.1-beta"
 				$OSArch = "x86"
 			Else
-				$ap = "1.1-beta-x64-beta-multi-chrome"
+				$ap = "x64-beta-multi-chrome"
 			EndIf
 		Case "Dev"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
@@ -1619,23 +1619,23 @@ Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 		EndIf
 	EndIf
 
-	; omaha protocol v2
-	If Not $LatestVer And ($x86 Or $OSArch = "x86" Or $WinVer < 6.1) Then
-		Local $arr[2] = ["https://clients2.google.com", "https://clients2.google.com"]
-		For $i = 0 To UBound($arr) - 1
-			_SetVar("DLInfo", "|||||从服务器获取 Chrome 更新信息... 第 " & $i + 4 & " 次尝试")
-			$hConnect = _WinHttpConnect($hHTTPOpen, $arr[$i])
-			$var = _WinHttpSimpleSSLRequest($hConnect, "GET", "service/update2/crx?x=id%3D{" & $id & "}%26uc&ap=" & $ap)
-			_WinHttpCloseHandle($hConnect)
-			$match = StringRegExp($var, '(?i)<updatecheck +Version="(.+?)".* codebase="(.+?)"', 1)
-			If Not @error Then
-				$LatestVer = $match[0]
-				$LatestUrl = $match[1]
-				ExitLoop
-			EndIf
-			Sleep(200)
-		Next
-	EndIf
+;~ 	; omaha protocol v2
+;~ 	If Not $LatestVer And ($x86 Or $OSArch = "x86" Or $WinVer < 6.1) Then
+;~ 		Local $arr[2] = ["https://clients2.google.com", "https://clients2.google.com"]
+;~ 		For $i = 0 To UBound($arr) - 1
+;~ 			_SetVar("DLInfo", "|||||从服务器获取 Chrome 更新信息... 第 " & $i + 4 & " 次尝试")
+;~ 			$hConnect = _WinHttpConnect($hHTTPOpen, $arr[$i])
+;~ 			$var = _WinHttpSimpleSSLRequest($hConnect, "GET", "service/update2/crx?x=id%3D{" & $id & "}%26uc&ap=" & $ap)
+;~ 			_WinHttpCloseHandle($hConnect)
+;~ 			$match = StringRegExp($var, '(?i)<updatecheck +Version="(.+?)".* codebase="(.+?)"', 1)
+;~ 			If Not @error Then
+;~ 				$LatestVer = $match[0]
+;~ 				$LatestUrl = $match[1]
+;~ 				ExitLoop
+;~ 			EndIf
+;~ 			Sleep(200)
+;~ 		Next
+;~ 	EndIf
 
 	_WinHttpCloseHandle($hHTTPOpen)
 	If $LatestVer Then
