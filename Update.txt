@@ -1,14 +1,8 @@
-latest=2.9.4
-url=http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.4.zip
-update=1）修正2.9.3版一处逻辑错误，这一错误导致勾选32-bit(x86)情况下代理设置不起作用。\n2）获取更新信息过程全部改用SSL加密，避免传输受干扰。\n3）增加omaha protocol v2方式，作为32位浏览器获取更新的备用方式。
+latest=2.9.5
+url=http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.5.zip
+update=增加 64 位 Chrome 稳定版（Stable）更新支持。
 
-latest_x64=2.9.4
-url_x64=http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.4_x64.zip
-update_x64=1）修正2.9.3版一处逻辑错误，这一错误导致勾选32-bit(x86)情况下代理设置不起作用。\n2）获取更新信息过程全部改用SSL加密，避免传输受干扰。\n3）增加omaha protocol v2方式，作为32位浏览器获取更新的备用方式。
-
-2.9.4
-http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.4.zip
-1）修正2.9.3版一处逻辑错误，这一错误导致勾选32-bit(x86)情况下代理设置不起作用。
-2）获取更新信息过程全部改用SSL加密，避免传输受干扰。
-3）增加omaha protocol v2方式，作为32位浏览器获取更新的备用方式。
+latest_x64=2.9.5
+url_x64=http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.5_x64.zip
+update_x64=增加 64 位 Chrome 稳定版（Stable）更新支持。
 
