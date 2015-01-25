@@ -1,3 +1,4 @@
+
 ; For those who would fear the license - don't. I tried to license it as liberal as possible.
 ; It really means you can do what ever you want with this.
 ; Donations are wellcome And will be accepted via PayPal address: trancexx at yahoo dot com
