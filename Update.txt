@@ -1,7 +1,7 @@
-﻿latest=2.9.5
-url=http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.5.zip
-update=增加 64 位 Chrome 稳定版（Stable）更新支持。
+﻿latest=2.9.6
+url=http://my-chrome.googlecode.com/svn/release/MyChrome_v2.9.6.zip
+update=1. 修正近期通过GoAgent更新获取的文件大小为0、更新失败的问题。\n2. 修正本地Chromium revision 显示错误影响更新的问题。\n3. 暂时解决在不同电脑运行扩展全部丢失的问题。\n4. 因众所周知的原因google code在中国大陆无法访问，MyChrome自身更新平台移至TaoCode（阿里开源平台）。
 
-latest_x64=2.9.5
-url_x64=http://my-chrome.googlecode.com/svn/download/MyChrome_v2.9.5_x64.zip
-update_x64=增加 64 位 Chrome 稳定版（Stable）更新支持。
+latest_x64=2.9.6
+url_x64=http://my-chrome.googlecode.com/svn/release/MyChrome_v2.9.6_x64.zip
+update_x64=1. 修正近期通过GoAgent更新获取的文件大小为0、更新失败的问题。\n2. 修正本地Chromium revision 显示错误影响更新的问题。\n3. 暂时解决在不同电脑运行扩展全部丢失的问题。\n4. 因众所周知的原因google code在中国大陆无法访问，MyChrome自身更新平台移至TaoCode（阿里开源平台）。

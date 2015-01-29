@@ -86,7 +86,7 @@ Func _StartThread($function, $p1 = "", $p2 = "", $p3 = "", $p4 = "", $p5 = "", $
 	Local $i, $p, $para
 	For $i = 1 to 10
 		$p = Eval("p" & $i)
-		If StringInStr($p, " ") Then ; 甯︾┖鏍肩殑鍙傛暟鍔犱笂寮曞彿
+		If StringInStr($p, " ") Then ; 带空格的参数加上引号
 			$p = '"' & $p & '"'
 		EndIf
 		$para &= ' ' & $p
