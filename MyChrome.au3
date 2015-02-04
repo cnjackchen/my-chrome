@@ -5,7 +5,7 @@
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Comment=可自动更新的 Google Chrome 便携版
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=3.0.0.0
+#AutoIt3Wrapper_Res_Fileversion=3.0.1.0
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -45,7 +45,7 @@ Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "3.0" ; MyChrome version
+Global Const $AppVersion = "3.0.1" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
 Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome, $x86 = 0
@@ -521,7 +521,7 @@ Func CheckDefaultBrowser($BrowserPath)
 	If $Progid Then
 		$var = RegRead('HKCR\' & $Progid & '\shell\open\command', '')
 		If Not StringInStr($var, @ScriptFullPath) Then
-			RegDelete('HKCR\' & $Progid & '\shell\open\ddeexec', '')
+			RegWrite('HKCR\' & $Progid & '\shell\open\ddeexec', '', 'REG_SZ', '')
 			RegDelete('HKCR\' & $Progid & '\shell\open\command', 'DelegateExecute') ; 解决 Win8“未注册类”错误
 			$RegWriteError += Not RegWrite('HKCR\' & $Progid & '\shell\open\command', _
 					'', 'REG_SZ', '"' & @ScriptFullPath & '" -- "%1"')
@@ -538,7 +538,7 @@ Func CheckDefaultBrowser($BrowserPath)
 		If StringInStr($var, $BrowserPath) Then
 			$var = RegRead('HKCR\' & $aAsso[$i] & '\shell\open\command', '')
 			If Not StringInStr($var, @ScriptFullPath) Then
-				RegDelete('HKCR\' & $aAsso[$i] & '\shell\open\ddeexec', '')
+				RegWrite('HKCR\' & $aAsso[$i] & '\shell\open\ddeexec', '', 'REG_SZ', '')
 				RegDelete('HKCR\' & $aAsso[$i] & '\shell\open\command', 'DelegateExecute')
 				$RegWriteError += Not RegWrite('HKCR\' & $aAsso[$i] & '\shell\open\command', _
 						'', 'REG_SZ', '"' & @ScriptFullPath & '" -- "%1"')
