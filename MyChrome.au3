@@ -5,7 +5,7 @@
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Comment=可自动更新的 Google Chrome 便携版
 #AutoIt3Wrapper_Res_Description=Google Chrome 便携版
-#AutoIt3Wrapper_Res_Fileversion=2.9.6.0
+#AutoIt3Wrapper_Res_Fileversion=3.0.0.0
 #AutoIt3Wrapper_Res_LegalCopyright=(C)甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -45,7 +45,7 @@ Opt("TrayOnEventMode", 1)
 Opt("GUIOnEventMode", 1)
 Opt("WinTitleMatchMode", 4)
 
-Global Const $AppVersion = "2.9.6" ; MyChrome version
+Global Const $AppVersion = "3.0" ; MyChrome version
 Global $AppName, $inifile, $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
 Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $AskBeforeUpdateChrome, $x86 = 0
@@ -65,7 +65,7 @@ Global $hParams, $hDownloadThreads, $hEnableProxy, $hProxySever, $hProxyPort
 Global $hAskBeforeUpdateChrome
 Global $hRunInBackground, $hExApp, $hExAppAutoExit, $hExApp2
 
-Global $ChromeFileVersion, $ChromeLastChange, $LatestChromeVer, $LatestChromeUrl
+Global $ChromeFileVersion, $ChromeLastChange, $LatestChromeVer, $LatestChromeUrls
 Global $DefaultChromeDir, $DefaultChromeVer, $DefaultUserDataDir
 Global $TrayTipProgress = 0
 Global $iThreadPid, $DownloadThreads
@@ -313,7 +313,11 @@ WEnd
 If $ExAppAutoExit And $ExApp <> "" Then
 	For $i = 1 To $aExAppPID[0]
 		If Not $aExAppPID[$i] Then ContinueLoop
-		$aChildren = _ProcessGetChildren($aExAppPID[$i])
+		If @OSArch = "X86" Then
+			$aChildren = _ProcessGetChildren($aExAppPID[$i])
+		Else
+			$aChildren = _ChildProcess($aExAppPID[$i])
+		EndIf
 		ProcessClose($aExAppPID[$i])
 		If IsArray($aChildren) Then
 			For $j = 1 To $aChildren[0][0]
@@ -359,9 +363,9 @@ Func GetChromeLastChange($path)
 	; chromium : 32cbfaa6478f66b93b6d383a58f606960e02441e-refs/heads/master@{#312162}
 	Local $ret
 	Local $match = StringRegExp(FileGetVersion($path, "LastChange"), '(\d{6,})\D*$', 1)
-	If not @error Then $ret = $match[0]
+	If Not @error Then $ret = $match[0]
 	Return $ret
-EndFunc
+EndFunc   ;==>GetChromeLastChange
 
 Func CheckEnv()
 	Local $oldstr, $var, $EnvString, $variations_seed, $variations_seed_signature
@@ -375,19 +379,19 @@ Func CheckEnv()
 		$var = FileRead($UserDataDir & "\Local State.MyChrome")
 		FileDelete($UserDataDir & "\Local State.MyChrome")
 		Local $match = StringRegExp($var, '(?im)^ *("variations_seed": *"\S+")', 1)
-		If not @error Then $variations_seed = $match[0]
+		If Not @error Then $variations_seed = $match[0]
 		Local $match = StringRegExp($var, '(?im)^ *("variations_seed_signature": *"\S+")', 1)
-		If not @error Then $variations_seed_signature = $match[0]
+		If Not @error Then $variations_seed_signature = $match[0]
 		$oldstr = FileRead($UserDataDir & "\Local State")
 		$var = StringRegExpReplace($oldstr, '(?i)"variations_seed": *"\S+"', $variations_seed)
 		$var = StringRegExpReplace($var, '(?i)"variations_seed_signature": *"\S+"', $variations_seed_signature)
 		If $var <> $oldstr Then
-			local $file = FileOpen($UserDataDir & "\Local State", 2+256)
+			Local $file = FileOpen($UserDataDir & "\Local State", 2 + 256)
 			FileWrite($file, $var)
 			FileClose($file)
 		EndIf
 	EndIf
-EndFunc
+EndFunc   ;==>CheckEnv
 
 Func OnExit()
 	If $hEvent Then
@@ -636,8 +640,8 @@ Func CheckAppUpdate()
 	$update = StringReplace($match[0], "\n", @CRLF)
 
 	If $AutoUpdateApp = 1 Then
-	$msg = MsgBox(68, 'MyChrome', 'MyChrome 可以更新，是否立即下载？' & @crlf & @crlf & _
-		'您的版本：' & $AppVersion & '，' & '最新版本：' & $LatestAppVer & @crlf & @crlf & $update)
+		$msg = MsgBox(68, 'MyChrome', 'MyChrome 可以更新，是否立即下载？' & @CRLF & @CRLF & _
+				'您的版本：' & $AppVersion & '，' & '最新版本：' & $LatestAppVer & @CRLF & @CRLF & $update)
 		If $msg <> 6 Then Return
 	EndIf
 	Local $temp = @ScriptDir & "\MyChrome_temp"
@@ -819,11 +823,12 @@ Func Settings()
 	GUICtrlSetTip(-1, "如果检查、下载更新出错，" & @CRLF & "可尝试通过代理服务器下载。")
 	GUICtrlSetOnEvent(-1, "SetProxy")
 	$hProxySever = GUICtrlCreateCombo($ProxySever, 150, 346, 110, 20)
-	GUICtrlSetData(-1, "127.0.0.1")
+	GUICtrlSetData(-1, "google.com|127.0.0.1")
+	GUICtrlSetOnEvent(-1, "SetProxyPort")
 	GUICtrlSetTip(-1, "代理服务器IP地址" & @CRLF & "仅适用于下载 chrome 更新")
 	GUICtrlCreateLabel("端口：", 290, 350, 80, 20)
 	$hProxyPort = GUICtrlCreateCombo($ProxyPort, 370, 346, 80, 20)
-	GUICtrlSetData(-1, "8087")
+	GUICtrlSetData(-1, "80|8087")
 	GUICtrlSetTip(-1, "代理服务器端口" & @CRLF & "仅适用于下载 chrome 更新")
 	If $EnableProxy Then
 		GUICtrlSetState($hEnableProxy, $GUI_CHECKED)
@@ -930,7 +935,6 @@ Func AddExApp2()
 	$ExApp2 = GUICtrlRead($hExApp2) & '"' & $path & '"' & @CRLF
 	GUICtrlSetData($hExApp2, $ExApp2)
 EndFunc   ;==>AddExApp2
-
 
 Func RunInBackground()
 	If GUICtrlRead($hRunInBackground) = $GUI_CHECKED Then
@@ -1210,7 +1214,7 @@ Func ShowLatestChromeVer()
 
 	SetProxy()
 	$LatestChromeVer = ""
-	$LatestChromeUrl = ""
+	$LatestChromeUrls = ""
 	GUICtrlSetData($hLatestChromeVer, "")
 
 	_SetVar("DLInfo", "|||||")
@@ -1239,7 +1243,7 @@ Func ShowLatestChromeVer()
 		_GUICtrlStatusBar_SetText($hStausbar, "获取 Google Chrome 更新信息失败")
 	ElseIf $aDlInfo[3] Then
 		$LatestChromeVer = $aDlInfo[0]
-		$LatestChromeUrl = $aDlInfo[1]
+		$LatestChromeUrls = $aDlInfo[1]
 	EndIf
 	GUICtrlSetData($hLatestChromeVer, $LatestChromeVer)
 EndFunc   ;==>ShowLatestChromeVer
@@ -1252,11 +1256,26 @@ EndFunc   ;==>OpenWebsite
 
 ;~ 显示下载地址
 Func ShowUrl()
-	If $LatestChromeUrl Then
-		ClipPut($LatestChromeUrl)
-		MsgBox(64, "MyChrome", "下载地址已复制到剪贴板!" & @CRLF & @CRLF & $LatestChromeUrl, 0, $hSettings)
+	If $LatestChromeUrls <> "" Then
+		Local $hGUI = GUICreate("MyChrome", 500, 240)
+		GUISetOnEvent($GUI_EVENT_CLOSE, "ShowUrlExit")
+		GUICtrlCreateLabel("点击链接可复制到剪贴板", 10, 10)
+		GUICtrlCreateList("", 10, 40, 480, 200)
+		GUICtrlSetData(-1, StringReplace($LatestChromeUrls, " ", "|"))
+		GUICtrlSetOnEvent(-1, "CopyUrl")
+		GUISetState(@SW_SHOW, $hGUI)
 	EndIf
 EndFunc   ;==>ShowUrl
+Func ShowUrlExit()
+	GUIDelete(@GUI_WinHandle)
+EndFunc   ;==>ShowUrlExit
+Func CopyUrl()
+	Local $url = GUICtrlRead(@GUI_CtrlId)
+	If $url <> "" Then
+		ClipPut($url)
+		MsgBox(64, "MyChrome", "下载地址已复制到剪贴板!", 0, @GUI_WinHandle)
+	EndIf
+EndFunc   ;==>CopyUrl
 
 Func GetChrome()
 	Local $source = GUICtrlRead($hChromeSource)
@@ -1280,7 +1299,7 @@ Func GetChrome()
 	EndIf
 EndFunc   ;==>GetChrome
 
-;~ 线程数限定在 1~10
+;~ thread 1~10
 Func ThreadsLimit()
 	Local $Threads = GUICtrlRead($hDownloadThreads)
 	If $Threads > 10 Then
@@ -1290,7 +1309,7 @@ Func ThreadsLimit()
 	EndIf
 EndFunc   ;==>ThreadsLimit
 
-;~ 启动 / 停止更新
+;~ start / stop update
 Func Start_End_ChromeUpdate()
 	If Not $IsUpdating Then
 		$IsUpdating = 1
@@ -1301,7 +1320,7 @@ Func Start_End_ChromeUpdate()
 	EndIf
 EndFunc   ;==>Start_End_ChromeUpdate
 
-;~ 下载更新代理服务器选项
+;~ Set proxy for update
 Func SetProxy()
 	If GUICtrlRead($hEnableProxy) = $GUI_CHECKED Then
 		$EnableProxy = 1
@@ -1315,6 +1334,13 @@ Func SetProxy()
 		GUICtrlSetState($hProxyPort, $GUI_DISABLE)
 	EndIf
 EndFunc   ;==>SetProxy
+
+Func SetProxyPort()
+	If GUICtrlRead($hProxySever) = "google.com" Then
+		GUICtrlSetData($hProxyPort, "80|8087", "80")
+	EndIf
+	SetProxy()
+EndFunc   ;==>SetProxyPort
 
 ;~ 选择缓存目录
 Func SelectCacheDir()
@@ -1362,7 +1388,7 @@ Func UpdateChrome($ChromePath, $Channel)
 	If Not $LatestChromeVer Then ; 获取更新信息
 		Do
 			$LatestChromeVer = ""
-			$LatestChromeUrl = ""
+			$LatestChromeUrls = ""
 			_SetVar("DLInfo", "|||||")
 			If $EnableProxy = 1 Then
 				$iThreadPid = _StartThread("GetLatestVersion", $Channel, $x86, $ProxySever, $ProxyPort)
@@ -1393,7 +1419,7 @@ Func UpdateChrome($ChromePath, $Channel)
 				_GUICtrlStatusBar_SetText($hStausbar, "获取 Google Chrome 更新信息失败")
 			ElseIf $aDlInfo[3] Then
 				$LatestChromeVer = $aDlInfo[0]
-				$LatestChromeUrl = $aDlInfo[1]
+				$LatestChromeUrls = $aDlInfo[1]
 			EndIf
 			If Not $LatestChromeVer Then
 				If Not IsHWnd($hSettings) Then ExitLoop
@@ -1428,83 +1454,93 @@ Func UpdateChrome($ChromePath, $Channel)
 		$msg = MsgBox(68, 'MyChrome', $info)
 	EndIf
 
-	Local $restart = 1, $error, $errormsg, $updated
+	Local $restart = 1, $error, $errormsg, $updated, $url
 	If $msg = 6 Then ; Yes
-		$IsUpdating = $LatestChromeUrl
-		Local $localfile = $ChromeDir & "\~update\chrome_installer.exe"
 		If IsHWnd($hSettings) Then
-			_GUICtrlStatusBar_SetText($hStausbar, "下载 Google Chrome ...")
-		ElseIf Not @TrayIconVisible Then
-			TraySetState(1)
-			TraySetClick(8)
-			TraySetToolTip("MyChrome")
-			TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "TrayTipProgress")
-			TrayCreateItem("取消更新 ...")
-			TrayItemSetOnEvent(-1, "CancelUpdate")
-			TrayTip("开始下载 Google Chrome", "点击图标可查看下载进度", 10, 1)
+			_GUICtrlStatusBar_SetText($hStausbar, "尝试连接已获取的下载地址 ...")
 		EndIf
-
-		Local $ResumeDownload = 0, $aDlInfo, $error, $errormsg
-		While 1
-			If Not $IsUpdating Then
-				ExitLoop ; 手动停止
+		$url = GetValidUrl($LatestChromeUrls, $ProxySever, $ProxyPort)
+		If $url = "" Then
+			If IsHWnd($hSettings) Or $AskBeforeUpdateChrome Then
+				MsgBox(16, "更新错误-MyChrome", "已获取的 Google Chrome 下载地址无法连接！", 0, $hSettings)
+			EndIf
+		Else
+			$IsUpdating = $url
+			Local $localfile = $ChromeDir & "\~update\chrome_installer.exe"
+			If IsHWnd($hSettings) Then
+				_GUICtrlStatusBar_SetText($hStausbar, "下载 Google Chrome ...")
+			ElseIf Not @TrayIconVisible Then
+				TraySetState(1)
+				TraySetClick(8)
+				TraySetToolTip("MyChrome")
+				TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "TrayTipProgress")
+				TrayCreateItem("取消更新 ...")
+				TrayItemSetOnEvent(-1, "CancelUpdate")
+				TrayTip("开始下载 Google Chrome", "点击图标可查看下载进度", 10, 1)
 			EndIf
 
-			_SetVar("DLInfo", "|||||")
-			_SetVar("ResponseTimer", TimerInit())
-			If $ResumeDownload Then
-				_SetVar("ResumeDownload", 1)
-			Else
-				If $EnableProxy = 1 Then
-					$iThreadPid = _StartThread("DownloadChrome", $LatestChromeUrl, $localfile, $LatestChromeVer, $DownloadThreads, $ProxySever, $ProxyPort)
+			Local $ResumeDownload = 0, $aDlInfo, $error, $errormsg
+			While 1
+				If Not $IsUpdating Then
+					ExitLoop ; 手动停止
+				EndIf
+
+				_SetVar("DLInfo", "|||||")
+				_SetVar("ResponseTimer", TimerInit())
+				If $ResumeDownload Then
+					_SetVar("ResumeDownload", 1)
 				Else
-					$iThreadPid = _StartThread("DownloadChrome", $LatestChromeUrl, $localfile, $LatestChromeVer, $DownloadThreads)
-				EndIf
-			EndIf
-
-			While 1 ; 等待下载结束
-				$aDlInfo = StringSplit(_GetVar("DLInfo"), "|", 2)
-				If IsHWnd($hSettings) Then
-					_GUICtrlStatusBar_SetText($hStausbar, $aDlInfo[5])
-				ElseIf $TrayTipProgress Or TrayTipExists("下载 Google Chrome") Then
-					$aDlInfo[5] = StringReplace($aDlInfo[5], ": ", @CRLF)
-					TrayTip("", $aDlInfo[5], 10, 1)
-					$TrayTipProgress = 0
-				EndIf
-				If $aDlInfo[2] Then ExitLoop ; 任务完成
-				If Not ProcessExists($iThreadPid) Or TimerDiff(_GetVar("ResponseTimer")) > 60000 Then
-					ExitLoop ; 子进程结束或无响应
+					If $EnableProxy = 1 Then
+						$iThreadPid = _StartThread("DownloadChrome", $url, $localfile, $LatestChromeVer, $DownloadThreads, $ProxySever, $ProxyPort)
+					Else
+						$iThreadPid = _StartThread("DownloadChrome", $url, $localfile, $LatestChromeVer, $DownloadThreads)
+					EndIf
 				EndIf
 
-				If Not $IsUpdating Then ; 手动停止
-					ExitLoop 2
+				While 1 ; 等待下载结束
+					$aDlInfo = StringSplit(_GetVar("DLInfo"), "|", 2)
+					If IsHWnd($hSettings) Then
+						_GUICtrlStatusBar_SetText($hStausbar, $aDlInfo[5])
+					ElseIf $TrayTipProgress Or TrayTipExists("下载 Google Chrome") Then
+						$aDlInfo[5] = StringReplace($aDlInfo[5], ": ", @CRLF)
+						TrayTip("", $aDlInfo[5], 10, 1)
+						$TrayTipProgress = 0
+					EndIf
+					If $aDlInfo[2] Then ExitLoop ; 任务完成
+					If Not ProcessExists($iThreadPid) Or TimerDiff(_GetVar("ResponseTimer")) > 60000 Then
+						ExitLoop ; 子进程结束或无响应
+					EndIf
+
+					If Not $IsUpdating Then ; 手动停止
+						ExitLoop 2
+					EndIf
+					Sleep(100)
+				WEnd
+
+				If $aDlInfo[2] And $aDlInfo[3] Then ; 下载成功
+					$updated = InstallChrome() ; 安装更新
+					ExitLoop
 				EndIf
-				Sleep(100)
+
+				$error = $aDlInfo[4]
+				If $error = 2 Then
+					$errormsg = "下载中断，文件未下载完整。"
+					$ResumeDownload = 1 ; 下载出错未完成，可续传
+				Else
+					$ResumeDownload = 0 ; 下载出错，不能续传
+					_KillThread($iThreadPid)
+					If $error = 1 Then
+						$errormsg = "无法连接更新服务器。"
+					ElseIf $error = 3 Then
+						$errormsg = "已下载的文件大小不正确。"
+					EndIf
+				EndIf
+				If Not IsHWnd($hSettings) And Not $AskBeforeUpdateChrome Then ExitLoop
+				$msg = MsgBox(16 + 5, "更新错误-MyChrome", "下载 Google Chrome 失败！" & @CRLF & $errormsg, 0, $hSettings)
+				If $msg <> 4 Then ExitLoop
+				Dim $aDlInfo[6]
 			WEnd
-
-			If $aDlInfo[2] And $aDlInfo[3] Then ; 下载成功
-				$updated = InstallChrome() ; 安装更新
-				ExitLoop
-			EndIf
-
-			$error = $aDlInfo[4]
-			If $error = 2 Then
-				$errormsg = "下载中断，文件未下载完整。"
-				$ResumeDownload = 1 ; 下载出错未完成，可续传
-			Else
-				$ResumeDownload = 0 ; 下载出错，不能续传
-				_KillThread($iThreadPid)
-				If $error = 1 Then
-					$errormsg = "无法连接更新服务器。"
-				ElseIf $error = 3 Then
-					$errormsg = "已下载的文件大小不正确。"
-				EndIf
-			EndIf
-			If Not IsHWnd($hSettings) And Not $AskBeforeUpdateChrome Then ExitLoop
-			$msg = MsgBox(16 + 5, "更新错误-MyChrome", "下载 Google Chrome 出错！" & @CRLF & $errormsg, 0, $hSettings)
-			If $msg <> 4 Then ExitLoop
-			Dim $aDlInfo[6]
-		WEnd
+		EndIf
 	EndIf
 
 	If @TrayIconVisible Then
@@ -1531,25 +1567,25 @@ EndFunc   ;==>CancelUpdate
 ;~ 5 - The extended value for the download. The value is arbitrary and is primarily only useful to the AutoIt developers.
 ;~ 从网络获取 chrome 最新版本号
 Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
-	Local $host, $urlbase, $var, $LatestVer, $LatestUrl, $i
+	Local $host, $urlbase, $var, $LatestVer, $LatestUrls, $i
+	Local $GoogleIP, $http = "https"
 	Local $WinVer = WinVer()
 	Local $OSArch = StringLower(@OSArch)
 	$x86 = $x86 * 1
 	AdlibRegister("ResetTimer", 1000) ; 定时向父进程发送时间信息（响应信息）
 
 	Local $hHTTPOpen, $hConnect, $version, $name, $a, $hRequest, $sHeader, $error
-	If $ProxySever <> "" And $ProxyPort <> "" Then
-		$hHTTPOpen = _WinHttpOpen(Default, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $ProxySever & ":" & $ProxyPort, "localhost")
-	Else
-		$hHTTPOpen = _WinHttpOpen() ; 无代理
+	If $ProxySever = "google.com" And $ProxyPort <> "" Then
+		$http = "http"
 	EndIf
-	_WinHttpSetTimeouts($hHTTPOpen, 0, 7000, 7000, 7000) ; 设置超时
+	$hHTTPOpen = HttpOpen($ProxySever, $ProxyPort)
+	_WinHttpSetTimeouts($hHTTPOpen, 0, 3000, 3000, 3000) ; 设置超时
 
 	; get latest Chromium developer build
 	; https://storage.googleapis.com/chromium-browser-continuous/index.html?path=Win/
 	; https://storage.googleapis.com/chromium-browser-continuous/index.html?path=Win_x64/
 	If StringInStr($Channel, "Chromium") Then
-		$host = "https://storage.googleapis.com"
+		$host = $http & "://storage.googleapis.com"
 		If $Channel = "Chromium-Continuous" Then
 			If $x86 Or $OSArch = "x86" Then
 				$urlbase = "chromium-browser-continuous/Win"
@@ -1562,18 +1598,22 @@ Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 		For $i = 1 To 3
 			_SetVar("DLInfo", "|||||从服务器获取 Chromium 更新信息... 第 " & $i & " 次尝试")
 			$hConnect = _WinHttpConnect($hHTTPOpen, $host)
-			$var = _WinHttpSimpleSSLRequest($hConnect, "GET", $urlbase & "/LAST_CHANGE")
+			If $ProxySever = "google.com" Then
+				$var = _WinHttpSimpleRequest($hConnect, "GET", $urlbase & "/LAST_CHANGE")
+			Else
+				$var = _WinHttpSimpleSSLRequest($hConnect, "GET", $urlbase & "/LAST_CHANGE")
+			EndIf
 			_WinHttpCloseHandle($hConnect)
 			If StringIsDigit($var) And $var > 0 Then
 				$LatestVer = $var
-				$LatestUrl = $host & "/" & $urlbase & "/" & $var & "/mini_installer.exe"
+				$LatestUrls = $host & "/" & $urlbase & "/" & $var & "/mini_installer.exe"
 				ExitLoop
 			EndIf
 			Sleep(200)
 		Next
 		_WinHttpCloseHandle($hHTTPOpen)
 		If $LatestVer Then
-			_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Chromium 更新信息")
+			_SetVar("DLInfo", $LatestVer & "|" & $LatestUrls & "|1|1||已成功获取 Chromium 更新信息")
 		Else
 			_SetVar("DLInfo", "||1||1|获取 Chromium 更新信息失败，请检查网络连接，稍后再试。")
 		EndIf
@@ -1618,20 +1658,24 @@ Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 	EndSwitch
 
 	; omaha protocol v3
-	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.23.9" shell_version="1.3.21.103" ismachine="0" ' & _
-			'sessionid="{3597644B-2952-4F92-AE55-D315F45F80A5}" installsource="ondemandcheckforupdate" ' & _
-			'requestid="{CD7523AD-A40D-49F4-AEEF-8C114B804658}" dedup="cr"><os platform="win" version="' & $WinVer & '" ' & _
-			'sp="' & @OSServicePack & '" arch="' & $OSArch & '"/><app appid="{' & $appid & '}" version="" nextversion="" ' & _
-			'ap="' & $ap & '" lang="" brand="GGLS" client=""><updatecheck/></app></request>'
-;~ 	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" ismachine="0">' & _
-;~ 			'<os platform="win" version="' & $WinVer & '" sp="' & @OSServicePack & '" arch="' & $OSArch & '"/>' & _
-;~ 			'<app appid="{' & $appid & '}" ap="' & $ap & '"><updatecheck/></app></request>'
+;~ 	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.23.9" shell_version="1.3.21.103" ismachine="0" ' & _
+;~ 			'sessionid="{3597644B-2952-4F92-AE55-D315F45F80A5}" installsource="ondemandcheckforupdate" ' & _
+;~ 			'requestid="{CD7523AD-A40D-49F4-AEEF-8C114B804658}" dedup="cr"><os platform="win" version="' & $WinVer & '" ' & _
+;~ 			'sp="' & @OSServicePack & '" arch="' & $OSArch & '"/><app appid="{' & $appid & '}" version="" nextversion="" ' & _
+;~ 			'ap="' & $ap & '" lang="" brand="GGLS" client=""><updatecheck/></app></request>'
+	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.23.9" ismachine="0">' & _
+			'<os platform="win" version="' & $WinVer & '" sp="' & @OSServicePack & '" arch="' & $OSArch & '"/>' & _
+			'<app appid="{' & $appid & '}" version="" nextversion="" ap="' & $ap & '"><updatecheck/></app></request>'
 
-	$host = "https://tools.google.com"
+	$host = $http & "://tools.google.com"
 	For $i = 1 To 3
 		_SetVar("DLInfo", "|||||从服务器获取 Chrome 更新信息... 第 " & 1 & " 次尝试")
 		$hConnect = _WinHttpConnect($hHTTPOpen, $host)
-		$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.23.9;winhttp")
+		If $ProxySever = "google.com" Then
+			$var = _WinHttpSimpleRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.23.9;winhttp")
+		Else
+			$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.23.9;winhttp")
+		EndIf
 		_WinHttpCloseHandle($hConnect)
 		$match = StringRegExp($var, '(?i)<manifest +version="(.+?)".* name="(.+?)"', 1)
 		$error = @error
@@ -1644,27 +1688,16 @@ Func GetLatestVersion($Channel, $x86 = 0, $ProxySever = "", $ProxyPort = "")
 		$match = StringRegExp($var, '(?i)<url +codebase="(.+?)"', 3)
 		If Not @error Then
 			For $i = 0 To UBound($match) - 1
-				_SetVar("DLInfo", "|||||尝试连接 " & $match[$i] & $name)
-				$a = HttpParseUrl($match[$i] & $name)
-				$hConnect = _WinHttpConnect($hHTTPOpen, $a[0], $a[2])
-				$hRequest = _WinHttpOpenRequest($hConnect, Default, $a[1])
-				_WinHttpSendRequest($hRequest)
-				_WinHttpReceiveResponse($hRequest)
-				$sHeader = _WinHttpQueryHeaders($hRequest, $WINHTTP_QUERY_STATUS_CODE)
-				_WinHttpCloseHandle($hRequest)
-				_WinHttpCloseHandle($hConnect)
-				If $sHeader = 200 Then
-					$LatestVer = $version
-					$LatestUrl = $match[$i] & $name
-					ExitLoop
-				EndIf
+				$LatestUrls &= " " & $match[$i] & $name
 			Next
+			$LatestVer = $version
+			$LatestUrls = StringStripWS($LatestUrls, 3)
 		EndIf
 	EndIf
 
 	_WinHttpCloseHandle($hHTTPOpen)
 	If $LatestVer Then
-		_SetVar("DLInfo", $LatestVer & "|" & $LatestUrl & "|1|1||已成功获取 Chrome 更新信息")
+		_SetVar("DLInfo", $LatestVer & "|" & $LatestUrls & "|1|1||已成功获取 Chrome 更新信息")
 	Else
 		_SetVar("DLInfo", "||1||1|获取 Chrome 更新信息失败，请检查网络连接，稍后再试。")
 	EndIf
@@ -1673,6 +1706,51 @@ Func ResetTimer() ; 定时向父进程发送时间信息，告诉父进程：我
 	_SetVar("ResponseTimer", TimerInit())
 EndFunc   ;==>ResetTimer
 #EndRegion 获取 Chrome 更新信息（最新版本号，下载地址）
+
+Func GetValidUrl($urls, $pServer, $pPort)
+	Local $i, $a, $hOpen, $hConnect, $hRequest, $sHeader, $ValidUrl
+	Local $aUrl = StringSplit($urls, " ")
+	$hOpen = HttpOpen($pServer, $pPort)
+	_WinHttpSetTimeouts($hOpen, 0, 3000, 3000, 3000)
+	For $i = 1 To $aUrl[0]
+		$a = HttpParseUrl($aUrl[$i])
+		$hConnect = _WinHttpConnect($hOpen, $a[0], $a[2])
+		If $a[2] = 443 Then
+			$hRequest = _WinHttpOpenRequest($hConnect, "GET", $a[1], Default, Default, Default, _
+					BitOR($WINHTTP_FLAG_SECURE, $WINHTTP_FLAG_ESCAPE_DISABLE))
+		Else
+			$hRequest = _WinHttpOpenRequest($hConnect, "GET", $a[1])
+		EndIf
+		_WinHttpSendRequest($hRequest)
+		_WinHttpReceiveResponse($hRequest)
+		$sHeader = _WinHttpQueryHeaders($hRequest, $WINHTTP_QUERY_STATUS_CODE)
+		_WinHttpCloseHandle($hRequest)
+		_WinHttpCloseHandle($hConnect)
+		If $sHeader = 200 Then
+			$ValidUrl = $aUrl[$i]
+			ExitLoop
+		EndIf
+	Next
+	_WinHttpCloseHandle($hOpen)
+	Return $ValidUrl
+EndFunc   ;==>GetValidUrl
+
+Func HttpOpen($pServer, $pPort)
+	Local $GoogleIP, $hOpen
+	If $pServer <> "" And $pPort <> "" Then
+		If $pServer = "google.com" Then
+			$GoogleIP = GetGoogleIP()
+		EndIf
+		If $GoogleIP Then
+			$hOpen = _WinHttpOpen(Default, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $GoogleIP & ":" & $pPort, "localhost")
+		Else
+			$hOpen = _WinHttpOpen(Default, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $pServer & ":" & $pPort, "localhost")
+		EndIf
+	Else
+		$hOpen = _WinHttpOpen() ; 无代理
+	EndIf
+	Return $hOpen
+EndFunc   ;==>HttpOpen
 
 #Region DownloadChrome
 ; #FUNCTION# ;===============================================================================
@@ -1708,12 +1786,8 @@ Func DownloadChrome($url, $localfile, $version = "", $DownloadThreads = 3, $Prox
 	_SetVar("DLInfo", "|||||准备下载 Google Chrome ...")
 	AdlibRegister("ResetTimer", 1000) ; 定时向父进程发送时间信息（响应信息）
 
-	Local $hHTTPOpen, $ret, $error
-	If $ProxySever <> "" And $ProxyPort <> "" Then
-		$hHTTPOpen = _WinHttpOpen(Default, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $ProxySever & ":" & $ProxyPort, "localhost")
-	Else
-		$hHTTPOpen = _WinHttpOpen() ; 无代理
-	EndIf
+	Local $hHTTPOpen, $ret, $error, $GoogleIP
+	$hHTTPOpen = HttpOpen($ProxySever, $ProxyPort)
 	_WinHttpSetTimeouts($hHTTPOpen, 0, 10000, 10000, 10000) ; 设置超时
 	While 1
 		$ret = __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $hHTTPOpen, $DownLoadInfo)
@@ -1729,7 +1803,6 @@ Func DownloadChrome($url, $localfile, $version = "", $DownloadThreads = 3, $Prox
 		If $error <> 2 Then ExitLoop
 		While 1
 			Sleep(100)
-			; ToolTip(_GetVar("ResumeDownload"))
 			If _GetVar("ResumeDownload") = 1 Then
 				_SetVar("ResumeDownload", 0)
 				ExitLoop 1
@@ -1741,7 +1814,7 @@ Func DownloadChrome($url, $localfile, $version = "", $DownloadThreads = 3, $Prox
 	_WinHttpCloseHandle($hHTTPOpen)
 	FileClose($hDlFile)
 	If Not WinExists($__hwnd_vars) Then
-		DirRemove($TempDir, 1) ; 没有父进程则删除文件
+		DirRemove($TempDir, 1) ; remove if father process is dead
 	EndIf
 EndFunc   ;==>DownloadChrome
 Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $hHTTPOpen, ByRef $DownLoadInfo)
@@ -1756,7 +1829,7 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 		IniWrite($TempDir & "\Update.ini", "general", "url", $url) ; 下载地址
 
 		; 测试服务器是否支持断点续传、获取远程文件大小，分块
-		_SetVar("DLInfo", "|||||正在连接 Google Chrome 服务器...")
+		_SetVar("DLInfo", "|||||正在连接服务器...")
 		For $i = 1 To 3
 			$aThread = CreateThread($url, $hHTTPOpen, "10-20")
 			$header = _WinHttpQueryHeaders($aThread[0])
@@ -1768,10 +1841,8 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 		Next
 
 		If Not $aThread[0] Or $header = "" Then
-			Return SetError(1, 0, "||1||1|连接 Google Chrome 更新服务器失败") ; 无法连接服务器
+			Return SetError(1, 0, "||1||1|连接更新服务器失败") ; 无法连接服务器
 		EndIf
-;~ 		FileDelete("header.txt")
-;~ 		filewrite("header.txt", $header)
 		If StringRegExp($header, '(?is)^HTTP/[\d\.]+ +200 ') Then ; 不支持断点续传
 			Dim $DownLoadInfo[1][5] = [[0, 0, 0]]
 			$match = StringRegExp($header, '(?im)Content-Length: *(\d+)', 1)
@@ -1914,10 +1985,10 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $version, $DownloadThreads, $h
 					ExitLoop
 				Else
 					$DownLoadInfo[$i][1] += $RecvLen
-					If $DownLoadInfo[$i][1] > $DownLoadInfo[$i][2]+1 Then
-						$DownLoadInfo[$i][1] = $DownLoadInfo[$i][2]+1
+					If $DownLoadInfo[$i][1] > $DownLoadInfo[$i][2] + 1 Then
+						$DownLoadInfo[$i][1] = $DownLoadInfo[$i][2] + 1
 						$complete = 1 ; mark current thread for complete
-						$i = $i-1 ; return to handle current thread
+						$i = $i - 1 ; return to handle current thread
 					EndIf
 				EndIf
 			EndIf
@@ -2463,7 +2534,40 @@ Func ReduceMemory($ProcID = @AutoItPID)
 	Return $ai_Return[0]
 EndFunc   ;==>ReduceMemory
 
+; ==================================================================================================
+; Name:     _ProcessGetChildren (only for x86)
+; Purpose:  Get a list of top-level child processes
+; Syntax:
+;           _ProcessGetChildren($i_ParentPID)
+; Returns:
+;           Success:
+;               If child processes ARE found ...
+;                   Returns a two-dimensional array wherein ...
+;                       $arr[n][0] = the PID of a child process
+;                       $arr[n][1] = the name of that child process
+;
+;               If child processes are NOT found ...
+;                   Returns 0
+;
+;           Failure:
+;               The passed $i_ParentPID is returned unchanged;
+;               @error is set as follows ...
+;                   1  - the first call to a function within "Kernel32.dll" failed.
+;                   2  - the second call to a function within "Kernel32.dll" failed.
+;                   3  -
+; Notes:
+;           If successful and no array is returned, then the passed process does not have child
+;               processes.
+;
+;           #Region Test_harness
+;               #include <array.au3>
+;               Global $a_children = _ProcessGetChildren(252)
+;               _ArrayDisplay($a_children)
+;           #EndRegion
+; Author:
+;           SmokeN - August 16, 2008; Kudos to UEZ
 ; http://www.autoitscript.com/forum/topic/78445-solved-parent-process-child-process/
+; ==================================================================================================
 Func _ProcessGetChildren($i_pid) ; First level children processes only
 	Local Const $TH32CS_SNAPPROCESS = 0x00000002
 	Local $a_tool_help = DllCall("Kernel32.dll", "long", "CreateToolhelp32Snapshot", "int", $TH32CS_SNAPPROCESS, "int", 0)
@@ -2522,6 +2626,64 @@ Func _ProcessGetChildren($i_pid) ; First level children processes only
 	Return SetError(3, 0, 0)
 EndFunc   ;==>_ProcessGetChildren
 
+;===============================================================================
+; Function Name:    _ChildProcess
+; Description:      Returns an array containing child process info
+; Parameter(s):     $iParentPID - Parent Process PID
+;
+; Requirement(s):   AutoIt 3.8+
+; Return Value(s):  two dimensional array $aChildren[][] as follows
+;                   $aChildren[0][0] = Number of children found
+;
+;                   $aChildren[x][0] = Child Process's PID (called Handle, but not a handle object)
+;                   $aChildren[x][1] = Child Process's Name
+;                   $aChildren[x][2] = Child Process's Command Line
+;                   $aChildren[x][3] = Child Process's Executable Path
+;                   $aChildren[x][4] = Child Process's Creation Date and Time
+;                   $aChildren[x][5] = Child Process's Session Id
+;                   $aChildren[x][6] = Child Process's Status
+;                   $aChildren[x][7] = Child Process's Termination Date
+;
+; AutoIt Version:   3.2.8.1
+; Author:           JerryD
+; http://www.autoitscript.com/forum/topic/59041-udf-childprocess-children-processes-of-a-pid/
+;===============================================================================
+Func _ChildProcess($iParentPID)
+	Local Const $wbemFlagReturnImmediately = 0x10, $wbemFlagForwardOnly = 0x20
+	Local Const $sQuery = 'SELECT * FROM Win32_Process Where ParentProcessId = ' & $iParentPID & ' AND Handle <> ' & $iParentPID
+	Local $aChildren[1][8]
+	$aChildren[0][0] = 0
+	$aChildren[0][1] = 'Name'
+	$aChildren[0][2] = 'Command Line'
+	$aChildren[0][3] = 'Executable Path'
+	$aChildren[0][4] = 'Creation Date and Time'
+	$aChildren[0][5] = 'Session Id'
+	$aChildren[0][6] = 'Status'
+	$aChildren[0][7] = 'Termination Date'
+
+	Local $objWMIService = ObjGet('winmgmts:\\localhost\root\CIMV2')
+	If Not IsObj($objWMIService) Then
+		Return SetError(1, 0, 0)
+	EndIf
+	Local $colItems = $objWMIService.ExecQuery($sQuery, 'WQL', $wbemFlagReturnImmediately + $wbemFlagForwardOnly)
+	If IsObj($colItems) Then
+		For $objItem In $colItems
+			$aChildren[0][0] += 1
+			ReDim $aChildren[$aChildren[0][0] + 1][8]
+			$aChildren[$aChildren[0][0]][0] = $objItem.Handle
+			$aChildren[$aChildren[0][0]][1] = $objItem.Name
+			$aChildren[$aChildren[0][0]][2] = $objItem.CommandLine
+			$aChildren[$aChildren[0][0]][3] = $objItem.ExecutablePath
+			$aChildren[$aChildren[0][0]][4] = $objItem.CreationDate
+			$aChildren[$aChildren[0][0]][5] = $objItem.SessionId
+			$aChildren[$aChildren[0][0]][6] = $objItem.Status
+			$aChildren[$aChildren[0][0]][7] = $objItem.TerminationDate
+		Next
+	Else
+		Return SetError(2, 0, 0)
+	EndIf
+	Return SetError(0, 0, $aChildren)
+EndFunc   ;==>_ChildProcess
 
 ; #FUNCTION# ;===============================================================================
 ; 参考 http://www.autoitscript.com/forum/topic/63947-read-full-exe-path-of-a-known-windowprogram/
@@ -2647,3 +2809,39 @@ Func VersionCompare($v1, $v2)
 	Next
 	Return False
 EndFunc   ;==>VersionCompare
+
+Func GetGoogleIP()
+	Local $var, $match, $i, $TryCnt, $hHTTPOpen, $hConnect, $hRequest, $sHeader, $IP
+	$var = BinaryToString(InetRead("http://www.xiexingwen.com/google/test_splus.php?query=*", 27), 4)
+	$match = StringRegExp($var, '(?is)var +hs\s*=\s*\[\s*([\d\." ,]+)\s*\]', 1)
+	If Not @error Then
+		$match = StringRegExp($match[0], '"(\d+\.\d+\.\d+\.\d+)"', 3)
+		$hHTTPOpen = _WinHttpOpen()
+		_WinHttpSetTimeouts($hHTTPOpen, 0, 3000, 3000, 3000) ; 设置超时
+		$TryCnt = 2
+		If UBound($match) < 3 Then
+			$TryCnt = UBound($match) - 1
+		EndIf
+		; only try up to 3 ips
+		For $i = 0 To $TryCnt
+			$hConnect = _WinHttpConnect($hHTTPOpen, $match[$i], 80)
+			$hRequest = _WinHttpOpenRequest($hConnect)
+			_WinHttpSendRequest($hRequest)
+			_WinHttpReceiveResponse($hRequest)
+			$sHeader = _WinHttpQueryHeaders($hRequest, $WINHTTP_QUERY_STATUS_CODE)
+			_WinHttpCloseHandle($hRequest)
+			_WinHttpCloseHandle($hConnect)
+			If $sHeader = 200 Then
+				$IP = $match[$i]
+				ExitLoop
+			EndIf
+		Next
+		_WinHttpCloseHandle($hHTTPOpen)
+	EndIf
+	If Not $IP Then
+		TCPStartup()
+		$IP = TCPNameToIP("google.com")
+		TCPShutdown()
+	EndIf
+	Return $IP
+EndFunc   ;==>GetGoogleIP

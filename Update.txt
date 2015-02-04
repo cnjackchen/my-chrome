@@ -1,7 +1,6 @@
-﻿latest=2.9.6
-url=http://my-chrome.googlecode.com/svn/release/MyChrome_v2.9.6.zip
-update=1. 修正近期通过GoAgent更新获取的文件大小为0、更新失败的问题。\n2. 修正本地Chromium revision 显示错误影响更新的问题。\n3. 暂时解决在不同电脑运行扩展全部丢失的问题。\n4. 因众所周知的原因google code在中国大陆无法访问，MyChrome自身更新平台移至TaoCode（阿里开源平台）。
-
-latest_x64=2.9.6
-url_x64=http://my-chrome.googlecode.com/svn/release/MyChrome_v2.9.6_x64.zip
-update_x64=1. 修正近期通过GoAgent更新获取的文件大小为0、更新失败的问题。\n2. 修正本地Chromium revision 显示错误影响更新的问题。\n3. 暂时解决在不同电脑运行扩展全部丢失的问题。\n4. 因众所周知的原因google code在中国大陆无法访问，MyChrome自身更新平台移至TaoCode（阿里开源平台）。
+﻿latest=3.0
+url=http://my-chrome.googlecode.com/svn/release/MyChrome_v3.0.zip
+update=1. 修正64位系统中浏览器退出后关闭外部程序时，残留子进程的问题（比如GoAgent的python27.exe）。2. 在MyChrome设置界面点击“最新版本号”，可显示所有下载链接。\n3. 没有代理软件也可更新浏览器。现在将代理服务器设为“google.com”，可自动获取google可用IP作为代理（IP来自网络）。
+latest_x64=3.0
+url_x64=http://my-chrome.googlecode.com/svn/release/MyChrome_v3.0_x64.zip
+update_x64=1. 修正64位系统中浏览器退出后关闭外部程序时，残留子进程的问题（比如GoAgent的python27.exe）。2. 在MyChrome设置界面点击“最新版本号”，可显示所有下载链接。\n3. 没有代理软件也可更新浏览器。现在将代理服务器设为“google.com”，可自动获取google可用IP作为代理（IP来自网络）。
