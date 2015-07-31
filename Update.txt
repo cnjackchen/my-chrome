@@ -1,6 +1,14 @@
-latest=3.1.3
-url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.1.3.7z
-update=1. 增加对SOCKS4、SOCK5代理的支持。\n2. 增加自主查找google系IP的功能， MyChrome中设代理服务器为google.com，且勾选“恢复浏览器部分google服务”，不使用代理软件也可在浏览器中访问部分google服务。\n3. 修正最近Chrome新版重装系统或复制到其它电脑丢失扩展的问题。
-latest_x64=3.0.1
-url_x64=http://my-chrome.googlecode.com/svn/release/MyChrome_v3.0.1_x64.zip
-update_x64=1. 修正64位系统中浏览器退出后关闭外部程序时，残留子进程的问题（比如GoAgent的python27.exe）。2. 在MyChrome设置界面点击“最新版本号”，可显示所有下载链接。\n3. 没有代理软件也可更新浏览器。现在将代理服务器设为“google.com”，可自动获取google可用IP作为代理（IP来自网络）。
+
+latest=3.3
+url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.3.7z
+update=1. 修正 Win 10 中锁定任务栏后出现双图标的问题。从 MyChrome 3.3 开始，Win 7 以上系统中可以直接右键菜单锁定 MyChrome.exe 至任务栏。\n2. 增加从新浪更新 Chrome 浏览器的选项（仅支持 Stable/Beta/Dev 分支）。
+latest_x64=3.3
+url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.3_x64.7z
+update_x64=1. 修正 Win 10 中锁定任务栏后出现双图标的问题。从 MyChrome 3.3 开始，Win 7 以上系统中可以直接右键菜单锁定 MyChrome.exe 至任务栏。\n2. 增加从新浪更新 Chrome 浏览器的选项（仅支持 Stable/Beta/Dev 分支）。
+
+inet_latest=3.2
+inet_url=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
+inet_update=IP失效时尝试从第三方网站获取Google可用IP。
+inet_latest_x64=3.2
+inet_url_x64=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
+inet_update_x64=IP失效时尝试从第三方网站获取Google可用IP。
