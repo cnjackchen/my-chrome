@@ -1,14 +1,20 @@
+﻿
+latest=3.5
+url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.5.7z
+url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.5_x64.7z
+update=1. 增加多语言支持，内置简体中文、繁体中文、英语。\n2. 其它小的优化。
+update_zh-TW=1. 增加多語言支援，內置簡體中文、繁體中文、英文。\n2. 其它小的優化。
+update_en-US=1. Added multi-language support including Chinese simplified, Chinese traditional and English.\n2. Other minor improvements.
 
-latest=3.3
-url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.3.7z
-update=1. 修正 Win 10 中锁定任务栏后出现双图标的问题。从 MyChrome 3.3 开始，Win 7 以上系统中可以直接右键菜单锁定 MyChrome.exe 至任务栏。\n2. 增加从新浪更新 Chrome 浏览器的选项（仅支持 Stable/Beta/Dev 分支）。
-latest_x64=3.3
-url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.3_x64.7z
-update_x64=1. 修正 Win 10 中锁定任务栏后出现双图标的问题。从 MyChrome 3.3 开始，Win 7 以上系统中可以直接右键菜单锁定 MyChrome.exe 至任务栏。\n2. 增加从新浪更新 Chrome 浏览器的选项（仅支持 Stable/Beta/Dev 分支）。
+latest_x64=3.5
+url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.5_x64.7z
+update_x64=1. 增加多语言支持，内置简体中文、繁体中文、英语。\n2. 其它小的优化。
 
 inet_latest=3.2
 inet_url=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
+inet_url_x64=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
 inet_update=IP失效时尝试从第三方网站获取Google可用IP。
+
 inet_latest_x64=3.2
 inet_url_x64=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
 inet_update_x64=IP失效时尝试从第三方网站获取Google可用IP。

@@ -1116,12 +1116,12 @@ Func _WinHttpSimpleFormFill(ByRef $hInternet, $sActionPage = Default, $sFormId =
 	#forceref $sFieldId21, $sData21, $sFieldId22, $sData22, $sFieldId23, $sData23, $sFieldId24, $sData24, $sFieldId25, $sData25, $sFieldId26, $sData26, $sFieldId27, $sData27, $sFieldId28, $sData28, $sFieldId29, $sData29, $sFieldId30, $sData30
 	#forceref $sFieldId31, $sData31, $sFieldId32, $sData32, $sFieldId33, $sData33, $sFieldId34, $sData34, $sFieldId35, $sData35, $sFieldId36, $sData36, $sFieldId37, $sData37, $sFieldId38, $sData38, $sFieldId39, $sData39, $sFieldId40, $sData40
 	__WinHttpDefault($sActionPage, "")
-	Local $iNumArgs = @NumParams, $sAdditionalHeaders, $sCredName, $sCredPass
+	Local $iNumArgs = @NumParams, $sAdditionalHeaders, $sCredName, $sCredPass, $aSplit
 	If Not Mod($iNumArgs, 2) Then
 		$sAdditionalHeaders = Eval("sFieldId" & $iNumArgs / 2 - 1)
 		Local $aCred = StringRegExp($sAdditionalHeaders, "\[CRED:(.*?)\]", 2)
 		If Not @error Then
-			Local $aSplit = StringSplit($aCred[1], ",", 3)
+			$aSplit = StringSplit($aCred[1], ",", 3)
 			If Not @error Then
 				$sCredName = $aSplit[0]
 				$sCredPass = $aSplit[1]
@@ -1170,7 +1170,7 @@ Func _WinHttpSimpleFormFill(ByRef $hInternet, $sActionPage = Default, $sFormId =
 		EndIf
 	EndIf
 	; Variables
-	Local $sForm, $sAttributes, $aAttributes, $aInput
+	Local $sForm, $sAttributes, $aInput
 	Local $iNumParams = Ceiling(($iNumArgs - 2) / 2) - 1
 	Local $sAddData
 	Local $aCrackURL, $sNewURL
@@ -1214,7 +1214,7 @@ Func _WinHttpSimpleFormFill(ByRef $hInternet, $sActionPage = Default, $sFormId =
 		If $fVarForm And Not $sNewURL Then Return SetError(5, 0, "") ; "action" must have URL specified
 		; Requested form is found. Set $fSend flag to true
 		$fSend = True
-		Local $aSplit, $sBoundary, $sPassedId, $sPassedData, $iNumRepl, $fMultiPart = False, $sSubmit, $sRadio, $sCheckBox, $sButton
+		Local $sBoundary, $sPassedId, $sPassedData, $iNumRepl, $fMultiPart = False, $sSubmit, $sRadio, $sCheckBox, $sButton
 		Local $sGrSep = Chr(29)
 		$aInput = StringRegExp($sForm, "(?si)<\h*(?:input|textarea|label|fieldset|legend|select|optgroup|option|button)\h*(.*?)/*\h*>", 3)
 		If @error Then Return SetError(2, 0, "") ; invalid form
