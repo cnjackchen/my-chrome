@@ -21,7 +21,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 ##Latest Changes
- ### 2015.08.14 v3.5
+ 2015.08.14 v3.5
  1. Added multi-language support including Chinese simplified, Chinese traditional and English.
  2. Other minor improvements.
 
@@ -30,14 +30,14 @@ http://code.taobao.org/p/mychrome/src/trunk/release/
  
 ##Multi-language
 Chinese simplified, Chinese traditional and English are supported.
- For other languages:
+For other languages:
  1. Select English or Chinese traditional first.
  2. Find the language file "en-US.ini" or "zh-TW.ini" in the "lang" subfolder,rename it to "lang.ini".
  3. Translate "lang.ini" to your language.
 
 ##Guide
- https://code.google.com/p/my-chrome/wiki/Guide
+https://code.google.com/p/my-chrome/wiki/Guide
 
 ##Issues
- 1. 到 [Issues](https://code.google.com/p/my-chrome/issues/list) 页面提交问题。
- 2. [在卡饭论坛的帖子](http://bbs.kafan.cn/thread-1725205-1-1.html)
+ 1. [Issues](https://code.google.com/p/my-chrome/issues/list)
+ 2. [卡饭论坛的帖子](http://bbs.kafan.cn/thread-1725205-1-1.html)
