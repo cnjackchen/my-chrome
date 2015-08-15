@@ -21,15 +21,15 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 ##Latest Changes
- ###2015.08.14 v3.5
+ ### 2015.08.14 v3.5
  1. Added multi-language support including Chinese simplified, Chinese traditional and English.
  2. Other minor improvements.
 
 ##Download MyChrome Binaries
- http://code.taobao.org/p/mychrome/src/trunk/release/
+http://code.taobao.org/p/mychrome/src/trunk/release/
  
-##Multi-Language
- Chinese simplified, Chinese traditional and English are supported.
+##Multi-language
+Chinese simplified, Chinese traditional and English are supported.
  For other languages:
  1. Select English or Chinese traditional first.
  2. Find the language file "en-US.ini" or "zh-TW.ini" in the "lang" subfolder,rename it to "lang.ini".
