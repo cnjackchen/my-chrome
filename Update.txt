@@ -1,13 +1,13 @@
 ﻿
 latest=3.5
-url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.5.7z
-url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.5_x64.7z
+url=https://github.com/cnjackchen/my-chrome/blob/master/release/MyChrome_v3.5.7z
+url_x64=https://github.com/cnjackchen/my-chrome/blob/master/release/MyChrome_v3.5_x64.7z
 update=1. 增加多语言支持，内置简体中文、繁体中文、英语。\n2. 其它小的优化。
 update_zh-TW=1. 增加多語言支援，內置簡體中文、繁體中文、英文。\n2. 其它小的優化。
 update_en-US=1. Added multi-language support including Chinese simplified, Chinese traditional and English.\n2. Other minor improvements.
 
 latest_x64=3.5
-url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.5_x64.7z
+url_x64=https://github.com/cnjackchen/my-chrome/blob/master/release/MyChrome_v3.5_x64.7z
 update_x64=1. 增加多语言支持，内置简体中文、繁体中文、英语。\n2. 其它小的优化。
 
 inet_latest=3.2
