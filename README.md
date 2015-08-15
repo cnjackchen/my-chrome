@@ -1,12 +1,12 @@
 ##Introduction
 
 MyChrome is a Google Chrome portable loader with features of:
- 1. Change Google Chrome binaries path, user data / cache folder.
- 2. Make your own Chrome portable and set Chrome as default browser.
- 3. Your Chrome portable can be updated automatically, all channels including Stable/Beta/Dev/Canary/Chromium are supported.
- 4. Run external apps on Chrome startup or on Chrome exit.
+- Change Google Chrome binaries path, user data / cache folder.
+- Make your own Chrome portable and set Chrome as default browser.
+- Your Chrome portable can be updated automatically, all channels including Stable/Beta/Dev/Canary/Chromium are supported.
+- Run external apps on Chrome startup or on Chrome exit.
 
-#License
+##License
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
