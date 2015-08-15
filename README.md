@@ -26,7 +26,7 @@ GNU General Public License for more details.
  2. Other minor improvements.
 
 ##Download MyChrome Binaries
-http://code.taobao.org/p/mychrome/src/trunk/release/
+https://github.com/cnjackchen/my-chrome/tree/master/release
  
 ##Multi-language
 Chinese simplified, Chinese traditional and English are supported.
