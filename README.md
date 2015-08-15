@@ -33,7 +33,7 @@ https://github.com/cnjackchen/my-chrome/tree/master/release
 ## Multi-language
 Chinese simplified, Chinese traditional and English are supported.
 
-For other languages:
+If you want to translate MyChrome to other languages, follow steps below:
  1. Select English or Chinese traditional first.
  2. Find the language file "en-US.ini" or "zh-TW.ini" in the "lang" subfolder,rename it to "lang.ini".
  3. Translate "lang.ini" to your language.
