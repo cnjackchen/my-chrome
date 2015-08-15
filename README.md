@@ -1,4 +1,4 @@
-#Introduction
+##Introduction
 
 MyChrome is a Google Chrome portable loader with features of:
  1. Change Google Chrome binaries path, user data / cache folder.
