@@ -22,15 +22,15 @@ GNU General Public License for more details.
 
 ##Latest Changes
 **2015.08.14 v3.5
-  * 1. Added multi-language support including Chinese simplified, Chinese traditional and English.
-  * 2. Other minor improvements.
+ 1. Added multi-language support including Chinese simplified, Chinese traditional and English.
+ 2. Other minor improvements.
 
-##Download MyChrome
-  * http://code.taobao.org/p/mychrome/src/trunk/release/
+##Download MyChrome Binaries
+ http://code.taobao.org/p/mychrome/src/trunk/release/
 
 ##Guide
-  * https://code.google.com/p/my-chrome/wiki/Guide
+ https://code.google.com/p/my-chrome/wiki/Guide
 
 ##Issues
-  1. 到 [Issues](https://code.google.com/p/my-chrome/issues/list) 页面提交问题。
-  1. [在卡饭论坛的帖子](http://bbs.kafan.cn/thread-1725205-1-1.html)
+ 1. 到 [Issues](https://code.google.com/p/my-chrome/issues/list) 页面提交问题。
+ 2. [在卡饭论坛的帖子](http://bbs.kafan.cn/thread-1725205-1-1.html)
