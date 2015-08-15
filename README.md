@@ -39,5 +39,5 @@ For other languages:
 https://code.google.com/p/my-chrome/wiki/Guide
 
 ##Issues
- 1. [Issues](https://code.google.com/p/my-chrome/issues/list)
+ 1. Go to [Issues](https://github.com/cnjackchen/my-chrome/issues)
  2. [卡饭论坛的帖子](http://bbs.kafan.cn/thread-1725205-1-1.html)
