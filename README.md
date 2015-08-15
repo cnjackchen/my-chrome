@@ -23,8 +23,9 @@ GNU General Public License for more details.
 ##Latest Changes
  2015.08.14 v3.5
  1. Added multi-language support including Chinese simplified, Chinese traditional and English.
- 2. Other minor improvements.  
-[History](https://github.com/cnjackchen/my-chrome/wiki/History)
+ 2. Other minor improvements.
+
+[History(Chinese simplified)](https://github.com/cnjackchen/my-chrome/wiki/History)
 
 ##Download MyChrome Binaries
 https://github.com/cnjackchen/my-chrome/tree/master/release
