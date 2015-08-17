@@ -3,9 +3,9 @@
 #AutoIt3Wrapper_Icon=Icon_1.ico
 #AutoIt3Wrapper_Compile_Both=y
 #AutoIt3Wrapper_UseX64=y
-#AutoIt3Wrapper_Res_Comment=可自动更新的 Google Chrome 便携版
+#AutoIt3Wrapper_Res_Comment=
 #AutoIt3Wrapper_Res_Description=Google Chrome Portable
-#AutoIt3Wrapper_Res_Fileversion=3.5.0.0
+#AutoIt3Wrapper_Res_Fileversion=3.5.1.0
 #AutoIt3Wrapper_Res_LegalCopyright=甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -39,7 +39,7 @@
 #include "AppUserModelId.au3"
 #include "ASock.au3" ; https://www.autoitscript.com/forum/topic/45189-asynchronous-sockets-udf/#comment-336619
 
-Global Const $AppVersion = "3.5" ; MyChrome version
+Global Const $AppVersion = "3.5.1" ; MyChrome version
 Global $AppName = StringRegExpReplace(@ScriptName, "\.[^.]*$", "")
 Global $inifile = @ScriptDir & "\" & $AppName & ".ini"
 Global $Language = IniRead($inifile, "Settings", "Language", "Auto")
@@ -1725,7 +1725,7 @@ EndFunc   ;==>GUI_DownloadUrl
 
 Func GUI_EventChromeSource()
 	$LangChromeSourceSys = lang("GUI", "ChromeSourceSys", '从系统中提取')
-	$LangChromeSourceInstaller = lang("GUI", "ChromeSourceInstaller", '从离线安装文件提取')
+	$LangChromeSourceInstaller = lang("GUI", "ChromeSourceInstaller", '从离线安装包提取')
 
 	Local $source = GUICtrlRead($hChromeSource)
 	If $source = $LangChromeSourceSys Then
