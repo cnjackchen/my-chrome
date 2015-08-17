@@ -34,14 +34,14 @@ Chinese simplified, Chinese traditional and English.
 
 If you want to translate MyChrome to other languages, follow steps below:
  1. Select English or Chinese traditional first.
- 2. Find the language file `en-US.ini` or `zh-TW.ini` in the "`lang`" subfolder, rename it to `lang.ini`.
- 3. Translate "lang.ini" to your language.
+ 2. Find the language file `"en-US.ini"` or `"zh-TW.ini"` in the `"lang"` subfolder, rename it to `"lang.ini"`.
+ 3. Translate `"lang.ini"` to your language.
 
 ## Guide
- 1. Download and un-zip MyChrome_vXX.7z to any folder.
- 2. Run MyChrome.exe to show settings GUI, change settings if necessary.
- 3. Press OK... Done!
- 4. Double click MyChrome.vbs to show settings window if you want to change settings in the future.
+ 1. Download and un-zip `MyChrome_vXX.7z` to any folder.
+ 2. Run `MyChrome.exe` to show settings GUI, change settings if necessary.
+ 3. Press `OK`... Done!
+ 4. Double click `MyChrome.vbs` to show settings window if you want to change settings in the future.
 
 ## Issues
  1. Go to [Issues](https://github.com/cnjackchen/my-chrome/issues)
