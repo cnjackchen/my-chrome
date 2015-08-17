@@ -21,7 +21,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 ## Latest Changes
- 2015.08.17 v3.5.1
+ 2015.08.17 v3.5.1  
  Fixed a bug which leads to getting Chrome executable from Chrome installer not work if Chinese simplified is used.
 
 [History(Chinese simplified)](https://github.com/cnjackchen/my-chrome/wiki/History)
