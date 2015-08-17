@@ -40,8 +40,8 @@ If you want to translate MyChrome to other languages, follow steps below:
 ## Guide
  1. Download and un-zip MyChrome_vXX.7z to any folder.
  2. Run MyChrome.exe to show settings GUI, change settings if necessary.
- 3. Press OK. Done!
- 4. Double click MyChrome.vbs if you want to change settings in the future.
+ 3. Press OK... Done!
+ 4. Double click MyChrome.vbs to show settings window if you want to change settings in the future.
 
 ## Issues
  1. Go to [Issues](https://github.com/cnjackchen/my-chrome/issues)
