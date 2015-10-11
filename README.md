@@ -6,7 +6,7 @@ MyChrome is a Google Chrome portable loader with features of:
  3. Your Chrome portable can be updated automatically, all channels including Stable/Beta/Dev/Canary/Chromium are supported.
  4. Run external apps on Chrome startup or on Chrome exit.
 
-![https://github.com/cnjackchen/my-chrome/blob/master/MyChrome_v3.5.gif](https://github.com/cnjackchen/my-chrome/blob/master/MyChrome_v3.5.gif)
+![https://github.com/cnjackchen/my-chrome/blob/master/MyChrome_v3.5.gif](https://github.com/cnjackchen/my-chrome/blob/master/MyChrome_v3.6.gif)
 
 ## License
 
@@ -21,8 +21,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 ## Latest Changes
- **Aug 17 2015 v3.5.1**  
- Fixed a bug which leads to getting Chrome executable from Chrome installer not work if Chinese simplified is used.
+ **Oct 11 2015 v3.6**
+  1. Resolved Canary update problem.
+  2. Support PAC when proxy is set to "System proxy".
+  3. Added boss key:press Alt+z or double click mouse's right button to hide Chrome.
 
 [History(Chinese simplified)](https://github.com/cnjackchen/my-chrome/wiki/History)
 

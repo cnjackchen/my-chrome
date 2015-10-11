@@ -3,9 +3,8 @@
 #AutoIt3Wrapper_Icon=Icon_1.ico
 #AutoIt3Wrapper_Compile_Both=y
 #AutoIt3Wrapper_UseX64=y
-#AutoIt3Wrapper_Res_Comment=
 #AutoIt3Wrapper_Res_Description=Google Chrome Portable
-#AutoIt3Wrapper_Res_Fileversion=3.5.1.0
+#AutoIt3Wrapper_Res_Fileversion=3.6.0.0
 #AutoIt3Wrapper_Res_LegalCopyright=甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -21,25 +20,20 @@
 #include <ComboConstants.au3>
 #include <GuiStatusBar.au3>
 #include <WindowsConstants.au3>
-#include <ButtonConstants.au3>
 #include <Array.au3>
-#include <WinAPIFiles.au3>
-#include <APIFilesConstants.au3>
 #include <WinAPI.au3>
-#include <WinAPIProc.au3>
 #include <WinAPIReg.au3>
-#include <APIRegConstants.au3>
-#include <WinAPIDiag.au3>
 #include <WinAPIMisc.au3>
 #include <WinAPISys.au3>
-#include <Security.au3>
+#include <Misc.au3>
 #include <InetConstants.au3>
-#include <File.au3>
 #include "WinHttp.au3" ; http://www.autoitscript.com/forum/topic/84133-winhttp-functions/
 #include "AppUserModelId.au3"
 #include "ASock.au3" ; https://www.autoitscript.com/forum/topic/45189-asynchronous-sockets-udf/#comment-336619
+#include "AppMute.au3"
 
-Global Const $AppVersion = "3.5.1" ; MyChrome version
+Global $WinVersion = _WinAPI_GetVersion()
+Global Const $AppVersion = "3.6" ; MyChrome version
 Global $AppName = StringRegExpReplace(@ScriptName, "\.[^.]*$", "")
 Global $inifile = @ScriptDir & "\" & $AppName & ".ini"
 Global $Language = IniRead($inifile, "Settings", "Language", "Auto")
@@ -63,10 +57,11 @@ Global $ChromeSource = "Google", $get_latest_chrome_ver = "get_latest_chrome_ver
 Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $x86 = 0
 Global $UseInetEx
 Global $AppUpdate, $AppUpdateLastCheck
-Global $RunInBackground, $ExApp, $ExAppAutoExit, $ExApp2, $AppPID, $ExAppPID
+Global $RunInBackground, $ExApp, $ExAppAutoExit, $ExApp2, $AppPID_Browser, $ExAppPID
 Global $TaskBarDir = @AppDataDir & "\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar"
 Global $TaskBarLastChange
 Global $aExApp, $aExApp2, $aExAppPID[2]
+Global $dicKeys, $Bosskey, $BosskeyM, $Hide2Tray
 Global $maphost, $google_com
 Global $CancelAppUpdate
 
@@ -77,6 +72,7 @@ Global $hChannel, $hx86, $hUpdateInterval, $hLatestChromeVer, $hCurrentVer, $hUs
 Global $hAppUpdate, $hCacheDir, $hSelectCacheDir, $hCacheSize
 Global $hParams, $hDownloadThreads, $hProxyType, $hProxySever, $hProxyPort, $hMapHost, $hUseInetEx
 Global $hRunInBackground, $hLanguage, $hExApp, $hExAppAutoExit, $hExApp2
+Global $hBosskey, $hBosskeyM, $hBosskeyM1, $hWndProc, $hHide2Tray
 
 Global $ChromeFileVersion, $ChromeLastChange, $LatestChromeVer, $LatestChromeUrls, $SelectedUrl
 Global $DefaultChromeDir, $DefaultChromeVer, $DefaultUserDataDir
@@ -138,7 +134,7 @@ If Not FileExists($inifile) Then
 		IniWrite($inifile, "Settings", "UpdateProxy", "google.com")
 		IniWrite($inifile, "Settings", "UpdatePort", 80)
 	Else
-		IniWrite($inifile, "Settings", "ProxyType", "DIRECT")
+		IniWrite($inifile, "Settings", "ProxyType", "SYSTEM")
 		IniWrite($inifile, "Settings", "UpdateProxy", "")
 		IniWrite($inifile, "Settings", "UpdatePort", "")
 	EndIf
@@ -152,6 +148,10 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "ExApp", "")
 	IniWrite($inifile, "Settings", "ExAppAutoExit", 1)
 	IniWrite($inifile, "Settings", "ExApp2", "")
+	IniWrite($inifile, "Settings", "Bosskey", "!z") ; Alt+z
+	IniWrite($inifile, "Settings", "BosskeyM", "RDClick")
+	IniWrite($inifile, "Settings", "Hide2Tray", 1)
+
 	; IPLookup
 	IniWrite($inifile, "IPLookup", "google_com", "")
 	IniWrite($inifile, "IPLookup", "pid", 0)
@@ -197,6 +197,9 @@ $CheckDefaultBrowser = IniRead($inifile, "Settings", "CheckDefaultBrowser", 1) *
 $ExApp = IniRead($inifile, "Settings", "ExApp", "")
 $ExAppAutoExit = IniRead($inifile, "Settings", "ExAppAutoExit", 1) * 1
 $ExApp2 = IniRead($inifile, "Settings", "ExApp2", "")
+$Bosskey = IniRead($inifile, "Settings", "Bosskey", "!z")
+$BosskeyM = IniRead($inifile, "Settings", "BosskeyM", "RDClick")
+$Hide2Tray = IniRead($inifile, "Settings", "Hide2Tray", 1) * 1
 $Inet = IniRead($inifile, "IPLookup", "exe", ".\inet.exe")
 $UseInetEx = IniRead($inifile, "IPLookup", "UseInetEx", "") * 1
 $IPLookupLastRun = IniRead($inifile, "IPLookup", "LastRun", "2015/01/01 00:00:00")
@@ -245,7 +248,7 @@ If $CacheSize <> 0 Then
 	$PortableParam &= ' --disk-cache-size=' & $CacheSize
 EndIf
 
-If $UseInetEx And $ProxyType == "HTTP" And $ProxySever = "google.com" And $maphost Then
+If $UseInetEx And $ProxyType = "HTTP" And $ProxySever = "google.com" And $maphost Then
 	$google_com = IniRead($inifile, "IPLookup", "google_com", "")
 	$arr = IniReadSection($inifile, "HostMap")
 	If @error Then
@@ -283,18 +286,20 @@ If Not $ChromeIsRunning And FileExists($ChromeDir & "\~updated") Then
 EndIf
 
 ; start chrome
-$AppPID = Run('"' & $ChromePath & '" ' & $PortableParam & ' ' & $Params, $ChromeDir)
+$AppPID_Browser = Run('"' & $ChromePath & '" ' & $PortableParam & ' ' & $Params, $ChromeDir)
 
 FileChangeDir(@ScriptDir)
 CreateSettingsShortcut(@ScriptDir & "\" & $AppName & ".vbs")
 
 ; check if another instance of mychrome is running
-$list = ProcessList(StringRegExpReplace(@AutoItExe, ".*\\", ""))
-For $i = 1 To $list[0][0]
-	If $list[$i][1] <> @AutoItPID And GetProcPath($list[$i][1]) = @AutoItExe Then
-		Exit ;exit if another instance of mychrome is running
-	EndIf
-Next
+If @Compiled Then
+	$list = ProcessList(StringRegExpReplace(@AutoItExe, ".*\\", ""))
+	For $i = 1 To $list[0][0]
+		If $list[$i][1] <> @AutoItPID And GetProcPath($list[$i][1]) = @AutoItExe Then
+			Exit ;exit if another instance of mychrome is running
+		EndIf
+	Next
+EndIf
 
 ; Start external apps
 If $ExApp <> "" Then
@@ -322,12 +327,12 @@ If $CheckDefaultBrowser Then
 	CheckDefaultBrowser($ChromePath)
 EndIf
 
-WinWait("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom.*]", "", 15) ; wait fo Chrome / Chromium window
-$hWnd_browser = GethWndbyPID($AppPID, ".*Chrome.*")
+WinWait("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]", "", 15) ; wait fo Chrome / Chromium window
+$hWnd_Browser = GethWndbyPID($AppPID_Browser, ".*Chrome.*")
 
 Global $AppUserModelId
 If FileExists($TaskBarDir) Then ; win 7+
-	$AppUserModelId = _WindowAppId($hWnd_browser)
+	$AppUserModelId = _WindowAppId($hWnd_Browser)
 	CheckPinnedPrograms($ChromePath)
 EndIf
 
@@ -350,6 +355,26 @@ If $CheckDefaultBrowser Then ; register REG for notification
 		EndIf
 	Next
 EndIf
+
+Global $ChromeIsHidden
+Global $IgnoreMouseEvent
+Global $DoubleClickTime = 500
+Global $hMouseEvent, $hMouseHook
+Global $aMouseEvent[2]
+;Global $iLBUTTONDOWN[2]
+;Global $iRBUTTONDOWN[2]
+;Global $iMBUTTONDOWN[2]
+
+If $Bosskey Then
+	HotKeySet($Bosskey, "Bosskey")
+	OnAutoItExitRegister("ResumeWindows")
+EndIf
+If $BosskeyM Then
+	$DoubleClickTime = DllCall("user32.dll", "uint", "GetDoubleClickTime")[0]
+	HookMouse()
+	OnAutoItExitRegister("UnhookMouse")
+EndIf
+
 OnAutoItExitRegister("OnExit")
 AdlibRegister("UpdateCheck", 10000)
 
@@ -360,20 +385,20 @@ $AppIsRunning = 1
 While 1
 	Sleep(500)
 
-	If $hWnd_browser Then
-		$AppIsRunning = WinExists($hWnd_browser)
+	If $hWnd_Browser Then
+		$AppIsRunning = WinExists($hWnd_Browser)
 	Else ; ProcessExists() is resource consuming than WinExists()
-		$AppIsRunning = ProcessExists($AppPID)
+		$AppIsRunning = ProcessExists($AppPID_Browser)
 	EndIf
 
 	If Not $AppIsRunning Then
 		; check other chrome instance
-		$AppPID = AppIsRunning($ChromePath)
-		If Not $AppPID Then
+		$AppPID_Browser = AppIsRunning($ChromePath)
+		If Not $AppPID_Browser Then
 			ExitLoop
 		EndIf
 		$AppIsRunning = 1
-		$hWnd_browser = GethWndbyPID($AppPID, ".*Chrome.*")
+		$hWnd_Browser = GethWndbyPID($AppPID_Browser, ".*Chrome.*")
 	EndIf
 
 	If $TaskBarLastChange Then
@@ -435,6 +460,185 @@ Exit
 
 ; ==================== auto-exec codes ends ========================
 
+
+; https://www.autoitscript.com/forum/topic/103362-monitoring-mouse-events/
+Func Mouse_Event($nCode, $wParam, $lParam)
+	Local $info, $time, $timeDiff
+	If $IgnoreMouseEvent Or $nCode < 0 Or $wParam = $WM_MOUSEWHEEL Or $wParam = $WM_MOUSEMOVE Then
+		Return _WinAPI_CallNextHookEx($hMouseHook, $nCode, $wParam, $lParam) ; Continue processing
+	EndIf
+
+	$tPoint = _WinAPI_GetMousePos()
+	$hWnd = _WinAPI_WindowFromPoint($tPoint)
+	If (WinGetProcess($hWnd) <> $AppPID_Browser) Or (Not StringInStr(_WinAPI_GetClassName($hWnd), "Chrome_RenderWidgetHostHWND")) Then
+		Return _WinAPI_CallNextHookEx($hMouseHook, $nCode, $wParam, $lParam)
+	EndIf
+
+	;$tagPOINT = "struct;long X;long Y;endstruct"
+	Local Const $MSLLHOOKSTRUCT = $tagPOINT & ";dword mouseData;dword flags;dword time;ulong_ptr dwExtraInfo"
+	$info = DllStructCreate($MSLLHOOKSTRUCT, $lParam)
+	$time = DllStructGetData($info, "time")
+	$timeDiff = $time - $aMouseEvent[1]
+	Switch $wParam
+		;Case $WM_LBUTTONDOWN
+		;	$iLBUTTONDOWN[0] = 1
+		;	$iLBUTTONDOWN[1] = $tPoint
+
+		;Case $WM_RBUTTONDOWN
+		;	$iRBUTTONDOWN[0] = 1
+		;	$iRBUTTONDOWN[1] = $tPoint
+
+		;Case $WM_MBUTTONDOWN
+		;	$iMBUTTONDOWN[0] = 1
+		;	$iMBUTTONDOWN[1] = $tPoint
+
+		;Case $WM_LBUTTONUP
+		;	$iLBUTTONDOWN[0] = 0
+		;	$aMouseEvent[1] = $time
+		;	If $aMouseEvent[0] = "LClick" And $timeDiff < $DoubleClickTime Then
+		;		$aMouseEvent[0] = "LDClick"
+		;	ElseIf Pixel_Distance(DllStructGetData($tPoint, "X"), DllStructGetData($tPoint, "Y"), _
+		;			DllStructGetData($iLBUTTONDOWN[1], "X"), DllStructGetData($iLBUTTONDOWN[1], "Y")) > 50 Then
+		;		$aMouseEvent[0] = "LDrop"
+		;	Else
+		;		$aMouseEvent[0] = "LClick"
+		;	EndIf
+
+		Case $WM_RBUTTONUP
+			;	$iRBUTTONDOWN[0] = 0
+			$aMouseEvent[1] = $time
+			If $aMouseEvent[0] = "RClick" And $timeDiff < $DoubleClickTime Then
+				$aMouseEvent[0] = "RDClick"
+				;	ElseIf Pixel_Distance(DllStructGetData($tPoint, "X"), DllStructGetData($tPoint, "Y"), _
+				;			DllStructGetData($iRBUTTONDOWN[1], "X"), DllStructGetData($iRBUTTONDOWN[1], "Y")) > 50 Then
+				;		$aMouseEvent[0] = "RDrop"
+			Else
+				$aMouseEvent[0] = "RClick"
+			EndIf
+
+		Case $WM_MBUTTONUP
+			;	$iMBUTTONDOWN[0] = 0
+			$aMouseEvent[1] = $time
+			If $aMouseEvent[0] = "MClick" And $timeDiff < $DoubleClickTime Then
+				$aMouseEvent[0] = "MDClick"
+				;	ElseIf Pixel_Distance(DllStructGetData($tPoint, "X"), DllStructGetData($tPoint, "Y"), _
+				;			DllStructGetData($iMBUTTONDOWN[1], "X"), DllStructGetData($iMBUTTONDOWN[1], "Y")) > 50 Then
+				;		$aMouseEvent[0] = "MDrop"
+			Else
+				$aMouseEvent[0] = "MClick"
+			EndIf
+	EndSwitch
+
+	If $aMouseEvent[1] = $time And StringInStr($BosskeyM, $aMouseEvent[0]) Then
+		;ConsoleWrite(@CRLF & @HOUR & @MIN & @SEC & @MSEC & " : " & $aMouseEvent[0] & @crlf)
+		AdlibRegister("Bosskey", 10)
+
+		; disable context menu
+		If StringLeft($aMouseEvent[0], 1) = "R" Then
+			$IgnoreMouseEvent = True
+			MouseUp("right")
+			MouseUp("right")
+			$IgnoreMouseEvent = False
+			Return 1
+		EndIf
+	EndIf
+
+	Return _WinAPI_CallNextHookEx($hMouseHook, $nCode, $wParam, $lParam) ; Continue processing
+EndFunc   ;==>Mouse_Event
+
+Func HookMouse()
+	$hMouseEvent = DllCallbackRegister("Mouse_Event", "int", "int;ptr;ptr")
+	$hMouseHook = _WinAPI_SetWindowsHookEx($WH_MOUSE_LL, DllCallbackGetPtr($hMouseEvent), _WinAPI_GetModuleHandle(0))
+EndFunc   ;==>HookMouse
+Func UnhookMouse()
+	_WinAPI_UnhookWindowsHookEx($hMouseHook)
+	DllCallbackFree($hMouseEvent)
+EndFunc   ;==>UnhookMouse
+
+Func Pixel_Distance($x1, $y1, $x2, $y2) ;Pythagoras theorem for 2D
+	Local $a, $b, $c
+	If $x2 = $x1 And $y2 = $y1 Then
+		Return 0
+	Else
+		$a = $y2 - $y1
+		$b = $x2 - $x1
+		$c = Sqrt($a * $a + $b * $b)
+		Return $c
+	EndIf
+EndFunc   ;==>Pixel_Distance
+
+Func Bosskey()
+	AdlibUnRegister("Bosskey")
+
+	If $BosskeyM Then
+		UnhookMouse()
+	EndIf
+
+	If $ChromeIsHidden Then
+		UnhideChrome()
+	Else
+		Local $aList, $pid
+		$aList = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]")
+		;_ArrayDisplay($aList)
+		If $aList[0][0] < 1 Then Return
+		For $i = 1 To $aList[0][0]
+			If BitAND(WinGetState($aList[$i][1]), 2) Then ; ignore hidden windows
+				$pid = WinGetProcess($aList[$i][1])
+				If $pid = $AppPID_Browser Then
+					WinSetState($aList[$i][1], "", @SW_HIDE)
+				EndIf
+			EndIf
+		Next
+		$ChromeIsHidden = 1
+
+		If $WinVersion >= "6.0" Then ; Windows Vista or later
+			Audio_SetAppMute($AppPID_Browser, 1)
+		EndIf
+
+		If $Hide2Tray Then
+			TraySetIcon($ChromePath)
+			TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "UnhideChrome")
+			TraySetState(1)
+			TraySetToolTip(StringFormat(lang("GUI", "UnhideChrome", 'Chrome已隐藏\n点击取消隐藏'), 0))
+		EndIf
+	EndIf
+EndFunc   ;==>Bosskey
+
+Func UnhideChrome()
+	ResumeWindows()
+	If $BosskeyM Then
+		HookMouse()
+	EndIf
+EndFunc   ;==>UnhideChrome
+
+Func ResumeWindows()
+	If $Hide2Tray Then
+		TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "")
+		TraySetToolTip()
+		TraySetIcon()
+		TraySetState(2)
+	EndIf
+
+	Local $aList, $pid
+	$aList = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]")
+	If $aList[0][0] < 1 Then Return
+	For $i = 1 To $aList[0][0]
+		If Not BitAND(WinGetState($aList[$i][1]), 2) Then ; hidden windows
+			$pid = WinGetProcess($aList[$i][1])
+			If $pid = $AppPID_Browser Or GetProcPath($pid) = $ChromePath Then
+				WinSetState($aList[$i][1], "", @SW_SHOW)
+				WinActivate($aList[$i][1])
+			EndIf
+		EndIf
+	Next
+	$ChromeIsHidden = 0
+
+	If $WinVersion >= "6.0" Then
+		Audio_SetAppMute($AppPID_Browser, 0)
+	EndIf
+EndFunc   ;==>ResumeWindows
+
+
 Func LangCheck()
 	If $Language = "Auto" And FileExists(@ScriptDir & "\lang\lang.ini") Then
 		Return @ScriptDir & "\lang\lang.ini"
@@ -486,15 +690,49 @@ Func lang($Section, $Key, $DefaltStr)
 	EndIf
 EndFunc   ;==>lang
 
+;#include <WinAPI.au3>
 Func GetIEProxy(ByRef $Sever, ByRef $Port)
 	$Sever = ""
 	$Port = ""
 	Local $aIEproxy = _WinHttpGetIEProxyConfigForCurrentUser()
 	If Not @error Then
-		$pos = StringInStr($aIEproxy[2], ":")
+		$sProxy = $aIEproxy[2]
+		If Not $sProxy And $aIEproxy[1] Then
+			; https://www.autoitscript.com/forum/topic/84133-winhttp-functions/?page=27
+			$pacAddress = $aIEproxy[1]
+			Local $WINHTTP_AUTOPROXY_OPTIONS = DllStructCreate("dword dwFlags;" & _
+					"dword dwAutoDetectFlags;" & _
+					"ptr lpszAutoConfigUrl;" & _
+					"ptr lpvReserved;" & _
+					"dword dwReserved;" & _
+					"dword fAutoLogonIfChallenged;")
+			Local $WINHTTP_PROXY_INFO = DllStructCreate("dword AccessType;ptr Proxy;ptr ProxyBypass")
+
+			DllStructSetData($WINHTTP_AUTOPROXY_OPTIONS, "dwFlags", $WINHTTP_AUTOPROXY_CONFIG_URL)
+			DllStructSetData($WINHTTP_AUTOPROXY_OPTIONS, "dwAutoDetectFlags", _
+					BitOR($WINHTTP_AUTO_DETECT_TYPE_DHCP, $WINHTTP_AUTO_DETECT_TYPE_DNS_A))
+			Local $tPacAddress = DllStructCreate("wchar[" & StringLen($pacAddress) + 1 & "]")
+			DllStructSetData($tPacAddress, 1, $pacAddress)
+			DllStructSetData($WINHTTP_AUTOPROXY_OPTIONS, "lpszAutoConfigUrl", DllStructGetPtr($tPacAddress))
+
+			Local $hOpen = _WinHttpOpen()
+			$url = "https://www.google.com"
+			Local $aCall = DllCall($hWINHTTPDLL__WINHTTP, "bool", "WinHttpGetProxyForUrl", _
+					"handle", $hOpen, _
+					"wstr", $url, _
+					"struct*", DllStructGetPtr($WINHTTP_AUTOPROXY_OPTIONS), _
+					"struct*", DllStructGetPtr($WINHTTP_PROXY_INFO))
+
+			;ConsoleWrite("_WinAPI_GetLastError: " & _WinAPI_GetLastError() & @CRLF)
+			_WinHttpCloseHandle($hOpen)
+			Local $pProxy = DllStructGetData($WINHTTP_PROXY_INFO, "Proxy")
+			$sProxy = DllStructGetData(DllStructCreate("wchar[" & _WinAPI_StringLenW($pProxy) & "]", $pProxy), 1)
+		EndIf
+
+		$pos = StringInStr($sProxy, ":")
 		If $pos Then
-			$Sever = StringLeft($aIEproxy[2], $pos - 1)
-			$Port = StringMid($aIEproxy[2], $pos + 1)
+			$Sever = StringLeft($sProxy, $pos - 1)
+			$Port = StringMid($sProxy, $pos + 1)
 		EndIf
 	EndIf
 EndFunc   ;==>GetIEProxy
@@ -673,18 +911,18 @@ Func CheckPinnedPrograms($browser_path)
 				$shortcut_appid = _ShortcutAppId($file)
 
 				If Not $AppUserModelId Then
-					If Not $hWnd_browser Then
+					If Not $hWnd_Browser Then
 						Sleep(3000)
-						$hWnd_browser = GethWndbyPID($AppPID, ".*Chrome.*")
+						$hWnd_Browser = GethWndbyPID($AppPID_Browser, ".*Chrome.*")
 					EndIf
-					$AppUserModelId = _WindowAppId($hWnd_browser)
+					$AppUserModelId = _WindowAppId($hWnd_Browser)
 					If Not $AppUserModelId Then
 						If $shortcut_appid Then
 							$AppUserModelId = $shortcut_appid
 						Else ; if no window appid found,set an id for the window
 							$AppUserModelId = "MyChrome." & StringTrimLeft(_WinAPI_HashString(@ScriptFullPath, 0, 16), 2)
 						EndIf
-						_WindowAppId($hWnd_browser, $AppUserModelId)
+						_WindowAppId($hWnd_Browser, $AppUserModelId)
 					EndIf
 				EndIf
 				If $shortcut_appid <> $AppUserModelId Then
@@ -855,14 +1093,13 @@ Func CheckAppUpdate($InetPath = "")
 
 	If $ProxyType = "SYSTEM" Then
 		HttpSetProxy(0)
-	ElseIf $ProxyType = "DIRECT" Or $ProxySever = "" Or $ProxySever = "google.com" Then
+	ElseIf $ProxyType = "DIRECT" Or Not $ProxySever Or $ProxySever = "google.com" Then
 		HttpSetProxy(1)
 	Else
 		HttpSetProxy(2, $ProxySever & ":" & $ProxyPort)
 	EndIf
 	$UpdateInfo = BinaryToString(InetRead("http://code.taobao.org/svn/mychrome/trunk/Update.txt", 27), 4)
 	$UpdateInfo = StringStripWS($UpdateInfo, 3)
-	;ConsoleWrite('@@ Debug(' & @ScriptLineNumber & ') : $UpdateInfo = ' & $UpdateInfo & @CRLF & '>Error code: ' & @error & @CRLF) ;### Debug Console
 
 	$LangUpdateTips = lang("AppUpdate", "UpdateTips", _
 			'%s 可以更新，是否立即下载？\n\n您的版本： %s，最新版本： %s\n\n%s')
@@ -1097,6 +1334,12 @@ Func Settings()
 	GUICtrlSetData(-1, "Auto|简体中文|繁體中文|English", $sLang)
 	GUICtrlSetOnEvent(-1, "GUI_LanguageEvent")
 
+	GUICtrlCreateLabel(lang("GUI", "LangSupport", '语言支持：'), 280, 390, 110, 20)
+	GUICtrlCreateLabel(IniRead($LangFile, "Lang", "LangSupport", ""), 390, 390, 100, 40)
+	GUICtrlSetCursor(-1, 0)
+	GUICtrlSetColor(-1, 0x0000FF)
+	GUICtrlSetOnEvent(-1, "GUI_LangSupport")
+
 	$hAppUpdate = GUICtrlCreateCheckbox(lang("GUI", "NotifyMyChromeUpdate", 'MyChrome 发布新版时通知我'), 20, 415, -1, 20)
 	If $AppUpdate Then
 		GUICtrlSetState($hAppUpdate, $GUI_CHECKED)
@@ -1118,7 +1361,7 @@ Func Settings()
 	GUICtrlSetOnEvent(-1, "GUI_SelectCacheDir")
 	GUICtrlCreateLabel(lang("GUI", "CacheSize", '缓存大小：'), 20, 140, 100, 20)
 	$hCacheSize = GUICtrlCreateEdit(Round($CacheSize / 1024 / 1024), 120, 136, 80, 20, $ES_AUTOHSCROLL)
-	Local $LangCacheSizeTips = lang("GUI", "ChromeCacheSizeTips", '缓存大小\n0 = 无限制')
+	Local $LangCacheSizeTips = lang("GUI", "ChromeCacheSizeTips", '缓存大小\n0 = 默认')
 	GUICtrlSetTip(-1, StringFormat($LangCacheSizeTips, 0))
 	GUICtrlCreateLabel(" MB", 200, 140, 40, 20)
 
@@ -1145,9 +1388,9 @@ Func Settings()
 	GUICtrlSetOnEvent(-1, "GUI_SetProxy")
 	Local $LangProxyDirect = lang("GUI", "ProxyDirect", '直接连接')
 	Local $LangProxyIE = lang("GUI", "ProxyIE", '跟随系统')
-	If $ProxyType == "DIRECT" Then
+	If $ProxyType = "DIRECT" Then
 		$sProxyType = $LangProxyDirect
-	ElseIf $ProxyType == "SYSTEM" Then
+	ElseIf $ProxyType = "SYSTEM" Then
 		$sProxyType = $LangProxyIE
 	Else
 		$sProxyType = "HTTP"
@@ -1178,8 +1421,8 @@ Func Settings()
 	EndIf
 	GUI_SetProxy()
 
-	; External apps
-	GUICtrlCreateTabItem(lang("GUI", "TabExApps", '外部程序'))
+	; More settings
+	GUICtrlCreateTabItem(lang("GUI", "TabMore", '更多'))
 	GUICtrlCreateLabel(lang("GUI", "StartWithChrome", '浏览器启动时运行：'), 20, 80, -1, 20)
 	$hExAppAutoExit = GUICtrlCreateCheckbox(lang("GUI", "QuitOnChromeExit", ' 浏览器退出后自动关闭*'), 240, 75, -1, 20)
 	If $ExAppAutoExit = 1 Then
@@ -1195,16 +1438,70 @@ Func Settings()
 	GUICtrlSetTip(-1, lang("GUI", "AddAppTips", '添加外部程序'))
 	GUICtrlSetOnEvent(-1, "GUI_AddExApp")
 
-	GUICtrlCreateLabel(lang("GUI", "RunOnChromeExit", '浏览器退出后运行*：'), 20, 180, -1, 20)
-	$hExApp2 = GUICtrlCreateEdit("", 20, 200, 410, 50, BitOR($ES_WANTRETURN, $WS_VSCROLL, $ES_AUTOVSCROLL))
+	GUICtrlCreateLabel(lang("GUI", "RunOnChromeExit", '浏览器退出后运行*：'), 20, 170, -1, 20)
+	$hExApp2 = GUICtrlCreateEdit("", 20, 190, 410, 50, BitOR($ES_WANTRETURN, $WS_VSCROLL, $ES_AUTOVSCROLL))
 	If $ExApp2 <> "" Then
 		GUICtrlSetData(-1, StringReplace($ExApp2, "||", @CRLF) & @CRLF)
 	EndIf
 	Local $LangExApps2Tips = lang("GUI", "ExApps2Tips", '支持批处理、vbs文件等，\n如需启动参数，可添加在程序路径之后。')
 	GUICtrlSetTip(-1, StringFormat($LangExApps2Tips, 0))
-	GUICtrlCreateButton(lang("GUI", "AddApp", '添加'), 440, 200, 40, 20)
+	GUICtrlCreateButton(lang("GUI", "AddApp", '添加'), 440, 190, 40, 20)
 	GUICtrlSetTip(-1, lang("GUI", "AddAppTips", '添加外部程序'))
 	GUICtrlSetOnEvent(-1, "GUI_AddExApp2")
+
+	GUICtrlCreateGroup(lang("GUI", "Bosskey", '老板键*'), 10, 270, 480, 90)
+	GUICtrlCreateLabel(lang("GUI", "Hotkey", '键盘：'), 20, 300, 110, 20)
+	$hBosskey = GUICtrlCreateInput("", 130, 296, 140, 20)
+
+	Local $Key = StringRegExpReplace($Bosskey, '[!+#^]+', '')
+	Local $key1
+	If $Key Then
+		If StringInStr($Bosskey, "+") Then
+			$key1 &= " + Shift"
+		EndIf
+		If StringInStr($Bosskey, "^") Then
+			$key1 &= " + Ctrl"
+		EndIf
+		If StringInStr($Bosskey, "!") Then
+			$key1 &= " + Alt"
+		EndIf
+		If StringInStr($Bosskey, "#") Then
+			$key1 &= " + Win"
+		EndIf
+		If Not $key1 Then
+			$key1 = "Ctrl"
+		Else
+			$key1 = StringTrimLeft($key1, 3)
+		EndIf
+		$Key = $key1 & " + " & $Key
+		GUICtrlSetData($hBosskey, $Key)
+	EndIf
+
+	Local $mButton = lang("GUI", "MiddleButton", '中键')
+	Local $rButton = lang("GUI", "RightButton", '右键')
+	$hBosskeyM = GUICtrlCreateCheckbox(lang("GUI", "MouseClick", '鼠标双击：'), 20, 326, 150, 20)
+	GUICtrlSetOnEvent(-1, "Gui_EventMouseClick")
+	$hBosskeyM1 = GUICtrlCreateCombo("", 170, 326, 100, 20, $CBS_DROPDOWNLIST)
+
+	Local $button = $rButton
+	If StringLeft($BosskeyM, 1) = "M" Then
+		$button = $mButton
+	EndIf
+	GUICtrlSetData($hBosskeyM1, $mButton & "|" & $rButton, $button)
+	If $BosskeyM Then
+		GUICtrlSetState($hBosskeyM, $GUI_CHECKED)
+	Else
+		GUICtrlSetState($hBosskeyM1, $GUI_DISABLE)
+	EndIf
+
+	$dicKeys = CreateKeysDic()
+	$hFuncHotkey = DllCallbackRegister('GUI_EventHotkey', 'lresult', 'hwnd;uint;wparam;lparam')
+	$hWndProc = _WinAPI_SetWindowLong(GUICtrlGetHandle($hBosskey), $GWL_WNDPROC, DllCallbackGetPtr($hFuncHotkey))
+
+	$hHide2Tray = GUICtrlCreateCheckbox(lang("GUI", "Hide2Tray", ' 隐藏到系统托盘'), 300, 296, -1, 20)
+	If $Hide2Tray Then
+		GUICtrlSetState($hHide2Tray, $GUI_CHECKED)
+	EndIf
 
 	GUICtrlCreateTabItem("")
 	$hSettingsOK = GUICtrlCreateButton(lang("GUI", "OK", '确定'), 260, 480, 70, 20)
@@ -1231,20 +1528,123 @@ Func Settings()
 		Sleep(100)
 	WEnd
 	GUIDelete($hSettings)
+	DllCallbackFree($hFuncHotkey)
+	$dicKeys = ""
 	$hSettings = "" ; free the handle
 EndFunc   ;==>Settings
+
+Func Gui_EventMouseClick()
+	If GUICtrlRead($hBosskeyM) = $GUI_CHECKED Then
+		GUICtrlSetState($hBosskeyM1, $GUI_ENABLE)
+	Else
+		GUICtrlSetState($hBosskeyM1, $GUI_DISABLE)
+	EndIf
+EndFunc   ;==>Gui_EventMouseClick
+
+Func GUI_EventHotkey($hWnd, $iMsg, $iwParam, $ilParam)
+	Switch $iMsg
+		Case $WM_CHAR, $WM_SYSCHAR, $WM_KEYDOWN, $WM_SYSKEYDOWN
+			If $iwParam <> 16 And $iwParam <> 17 And $iwParam <> 18 And $iwParam <> 91 And $iwParam <> 92 Then
+				If $iwParam = 8 Or $iwParam = 46 Then ; 8 - {Backspace}, 46 - {Delete}
+					$Key = ""
+				Else
+					$Key = _WinAPI_GetKeyNameText($ilParam)
+					;ConsoleWrite($iwParam & " " & $Key & @CRLF)
+					If StringLen($Key) <= 1 Then
+						$Key = StringLower($Key)
+					Else
+						If StringInStr($Key, " ") Then
+							If $dicKeys.Exists($Key) Then
+								$Key = $dicKeys.Item($Key)
+							Else
+								$Key = StringReplace($Key, " ", "")
+							EndIf
+						EndIf
+						$Key = "{" & $Key & "}"
+					EndIf
+
+					Local $k
+					If _IsPressed("10") Then
+						$k &= " + Shift"
+					EndIf
+					If _IsPressed("11") Then
+						$k &= " + Ctrl"
+					EndIf
+					If _IsPressed("12") Then
+						$k &= " + Alt"
+					EndIf
+					If _IsPressed("5B") Or _IsPressed("5C") Then
+						$k &= " + Win"
+					EndIf
+
+					If Not $k Then
+						$k = "Ctrl"
+					Else
+						$k = StringTrimLeft($k, 3)
+					EndIf
+					$Key = $k & " + " & $Key
+				EndIf
+
+				GUICtrlSetData($hBosskey, $Key)
+			EndIf
+			Return
+	EndSwitch
+	Return _WinAPI_CallWindowProc($hWndProc, $hWnd, $iMsg, $iwParam, $ilParam)
+EndFunc   ;==>GUI_EventHotkey
+
+Func CreateKeysDic()
+	Local $oDic = ObjCreate("Scripting.Dictionary")
+	$oDic.Add("Page Up", "PGUP")
+	$oDic.Add("Page Down", "PGDN")
+	$oDic.Add("Num Lock", "NUMLOCK")
+	$oDic.Add("Caps Lock", "CAPSLOCK")
+	$oDic.Add("Scroll Lock", "SCROLLLOCK")
+	$oDic.Add("Num 0", "NUMPAD0")
+	$oDic.Add("Num 1", "NUMPAD1")
+	$oDic.Add("Num 2", "NUMPAD2")
+	$oDic.Add("Num 3", "NUMPAD3")
+	$oDic.Add("Num 4", "NUMPAD4")
+	$oDic.Add("Num 5", "NUMPAD5")
+	$oDic.Add("Num 6", "NUMPAD6")
+	$oDic.Add("Num 7", "NUMPAD7")
+	$oDic.Add("Num 8", "NUMPAD8")
+	$oDic.Add("Num 9", "NUMPAD9")
+	$oDic.Add("Num *", "NUMPADMULT")
+	$oDic.Add("Num +", "NUMPADADD")
+	$oDic.Add("Num -", "NUMPADSUB")
+	$oDic.Add("Num /", "NUMPADDIV")
+	Return $oDic
+EndFunc   ;==>CreateKeysDic
+
+Func GUI_LangSupport()
+	Local $link = IniRead($LangFile, "Lang", "LangLink", "")
+	If $link Then
+		If StringLeft($link, 4) = "http" Then
+			ShellExecute($link)
+		Else
+			MsgBox(64, "MyChrome", $link)
+		EndIf
+	EndIf
+EndFunc   ;==>GUI_LangSupport
 
 Func GUI_LanguageEvent()
 	GUI_SaveLang()
 
 	If $Language = "zh-CN" Then
-		$langstr = "需重启 MyChrome 才能使修改生效！"
+		$langstr = "语言设置将在重启 MyChrome 后生效！"
 	ElseIf $Language = "zh-TW" Then
-		$langstr = "需重啟 MyChrome 才能使修改生效！"
+		$langstr = "語言設置將在重啟 MyChrome 後生效！"
 	Else
-		$langstr = "Changes will be effective from MyChrome's next startup!"
+		$langstr = "MyChrome will restart to apply new language!"
 	EndIf
 	MsgBox(64, "MyChrome", $langstr)
+	GUIDelete($hSettings)
+	If @Compiled Then
+		ShellExecute(@ScriptName, "-Set", @ScriptDir)
+	Else
+		ShellExecute(@AutoItExe, '"' & @ScriptFullPath & '" -Set', @ScriptDir)
+	EndIf
+	Exit
 EndFunc   ;==>GUI_LanguageEvent
 
 Func GUI_SaveLang()
@@ -1539,6 +1939,39 @@ Func GUI_SettingsApply()
 	If StringRegExp($var, '^".*"$') Then $var = '"' & $var & '"'
 	IniWrite($inifile, "Settings", "ExApp2", $var)
 
+	; boss key
+	$Bosskey = ""
+	$Key = GUICtrlRead($hBosskey)
+	If $Key Then
+		$Bosskey = StringStripWS($Key, 8) ;strip all spaces
+		$Bosskey = StringReplace($Bosskey, "+", "")
+		$Bosskey = StringReplace($Bosskey, "Shift", "+")
+		$Bosskey = StringReplace($Bosskey, "Ctrl", "^")
+		$Bosskey = StringReplace($Bosskey, "Alt", "!")
+		$Bosskey = StringReplace($Bosskey, "Win", "#")
+	EndIf
+	If GUICtrlRead($hHide2Tray) = $GUI_CHECKED Then
+		$Hide2Tray = 1
+	Else
+		$Hide2Tray = 0
+	EndIf
+
+
+	Local $mButton = lang("GUI", "MiddleButton", '中键')
+	Local $Key = GUICtrlRead($hBosskeyM)
+	If $Key <> $GUI_CHECKED Then
+		$BosskeyM = ""
+	Else
+		If GUICtrlRead($hBosskeyM1) = $mButton Then
+			$BosskeyM = "MDClick"
+		Else
+			$BosskeyM = "RDClick"
+		EndIf
+	EndIf
+	IniWrite($inifile, "Settings", "Bosskey", $Bosskey)
+	IniWrite($inifile, "Settings", "BosskeyM", $BosskeyM)
+	IniWrite($inifile, "Settings", "Hide2Tray", $Hide2Tray)
+
 	SplitPath($ChromePath, $ChromeDir, $ChromeExe)
 	Opt("ExpandEnvStrings", 1)
 	If Not FileExists($ChromePath) Then
@@ -1610,7 +2043,6 @@ Func GUI_CheckChromeInSystem($Channel)
 
 	If FileExists($DefaultUserDataDir & "\Local State") Then
 		GUICtrlSetState($hCopyData, $GUI_ENABLE)
-		GUICtrlSetTip($hCopyData, "复制 Google Chrome 用户数据文件：" & @CRLF & $DefaultUserDataDir)
 	Else
 		GUICtrlSetState($hCopyData, $GUI_UNCHECKED)
 		GUICtrlSetState($hCopyData, $GUI_DISABLE)
@@ -1650,7 +2082,7 @@ Func GUI_ShowLatestChromeVer()
 
 	_SetVar("DLInfo", "|||||")
 	_SetVar("ResponseTimer", _NowCalc())
-	If $ProxyType == "DIRECT" Or $ProxySever == "" Then
+	If $ProxyType = "DIRECT" Or Not $ProxySever Then
 		$iThreadPid = _StartThread(@ScriptFullPath, $get_latest_chrome_ver, $Channel, $x86, $inifile)
 	Else
 		$iThreadPid = _StartThread(@ScriptFullPath, $get_latest_chrome_ver, $Channel, $x86, $inifile, _
@@ -1818,7 +2250,7 @@ Func UpdateChrome($ChromePath, $Channel, $strUrl = "")
 		Return
 	EndIf
 
-	If $ProxyType == "SYSTEM" Then
+	If $ProxyType = "SYSTEM" Then
 		GetIEProxy($ProxySever, $ProxyPort)
 	EndIf
 
@@ -1832,7 +2264,7 @@ Func UpdateChrome($ChromePath, $Channel, $strUrl = "")
 			_SetVar("DLInfo", "|||||")
 			$ResponseTimer = _NowCalc()
 			_SetVar("ResponseTimer", $ResponseTimer)
-			If $ProxyType == "DIRECT" Or $ProxySever == "" Then
+			If $ProxyType = "DIRECT" Or Not $ProxySever Then
 				$iThreadPid = _StartThread(@ScriptFullPath, $get_latest_chrome_ver, $Channel, $x86, $inifile)
 			Else
 				$iThreadPid = _StartThread(@ScriptFullPath, $get_latest_chrome_ver, $Channel, $x86, $inifile, _
@@ -1951,7 +2383,7 @@ Func UpdateChrome($ChromePath, $Channel, $strUrl = "")
 				_GUICtrlStatusBar_SetText($hStausbar, lang("Update", "RestoringDownload", '尝试恢复下载') & ' ...')
 			EndIf
 		Else
-			If $ProxyType = "DIRECT" Or $ProxySever = "" Then
+			If $ProxyType = "DIRECT" Or Not $ProxySever Then
 				$iThreadPid = _StartThread(@ScriptFullPath, "download_chrome", $urls, $localfile, $DownloadThreads, $inifile)
 			Else
 				$iThreadPid = _StartThread(@ScriptFullPath, "download_chrome", $urls, $localfile, _
@@ -2030,7 +2462,6 @@ EndFunc   ;==>CancelUpdate
 
 Func get_latest_chrome_ver_sina($Channel, $x86 = 0, $inifile = "", $Proxy = "")
 	Local $LatestVer, $LatestUrls
-	Local $WinVer = _WinAPI_GetVersion()
 	Local $OSArch = StringLower(@OSArch)
 	$x86 = $x86 * 1
 	AdlibRegister("ResetTimer", 1000) ; 定时向父进程发送时间信息（响应信息）
@@ -2052,7 +2483,7 @@ Func get_latest_chrome_ver_sina($Channel, $x86 = 0, $inifile = "", $Proxy = "")
 		DEV: down_id=5 / dwon_id=6
 	#ce
 	Local $down_id, $need_x86
-	If $x86 Or $OSArch = "x86" Or VersionCompare($WinVer, "6.1") < 0 Then
+	If $x86 Or $OSArch = "x86" Or $WinVersion < "6.0" Then
 		$need_x86 = True
 	EndIf
 	Switch $Channel
@@ -2134,7 +2565,6 @@ EndFunc   ;==>get_latest_chrome_ver_sina
 Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy = "")
 	Local $host, $urlbase, $var, $LatestVer, $LatestUrls
 	Local $http = "https"
-	Local $WinVer = _WinAPI_GetVersion()
 	Local $OSArch = StringLower(@OSArch)
 	$x86 = $x86 * 1
 	AdlibRegister("ResetTimer", 1000) ; 定时向父进程发送时间信息（响应信息）
@@ -2219,7 +2649,7 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 
 	; http://code.google.com/p/omaha/wiki/ServerProtocol
 	Local $need_x86, $appid, $ap, $data, $match
-	If $x86 Or $OSArch = "x86" Or VersionCompare($WinVer, "6.1") < 0 Then
+	If $x86 Or $OSArch = "x86" Or $WinVersion < "6.0" Then
 		$need_x86 = True
 	EndIf
 	Switch $Channel
@@ -2258,18 +2688,19 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 	EndSwitch
 
 	; omaha protocol v3
-	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.23.9" ismachine="0">' & _
-			'<os platform="win" version="' & $WinVer & '" sp="' & @OSServicePack & '" arch="' & $OSArch & '"/>' & _
+	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.28.15" ismachine="0">' & _
+			'<hw physmemory="2" sse="1" sse2="1" sse3="1" ssse3="1" sse41="0" sse42="0" avx="0"/>' & _
+			'<os platform="win" version="' & $WinVersion & '" sp="' & @OSServicePack & '" arch="' & $OSArch & '"/>' & _
 			'<app appid="{' & $appid & '}" version="" nextversion="" ap="' & $ap & '"><updatecheck/></app></request>'
 
 	For $i = 1 To 3
 		_SetVar("DLInfo", '|||||' & StringFormat($LangGetChromeChances, "Chrome", $i))
 		$hConnect = _WinHttpConnect($hHTTPOpen, "https://tools.google.com")
 		If $ProxyPort = 80 Then
-			$var = _WinHttpSimpleRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.23.9;winhttp")
+			$var = _WinHttpSimpleRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.28.15;winhttp;cup-ecdsa")
 			$error = @error
 		Else
-			$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.23.9;winhttp")
+			$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.28.15;winhttp;cup-ecdsa")
 			$error = @error
 		EndIf
 		_WinHttpCloseHandle($hConnect)
@@ -2496,7 +2927,7 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $DownloadThreads, $hHTTPOpen, 
 	Local $n, $data, $RecvError, $RecvLen, $msg, $bytes
 	Local $Threads = UBound($DownLoadInfo)
 	Local $t = TimerInit()
-	Local $timediff, $timeinit = $t
+	Local $timeDiff, $timeinit = $t
 	Local $speed, $progress
 	Local $ErrorThreads, $LiveThreads, $FileError, $complete = 0
 	Local $size = 0, $a
@@ -2614,13 +3045,18 @@ Func __DownloadChrome($url, $localfile, $hDlFile, $DownloadThreads, $hHTTPOpen, 
 		If TimerDiff($t) > 200 Then
 			$speed = 0
 			$t = TimerInit()
-			$timediff = TimerDiff($timeinit)
-			_ArrayPush($S, $timediff & ":" & $size)
+			$timeDiff = TimerDiff($timeinit)
+			_ArrayPush($S, $timeDiff & ":" & $size)
 			$a = StringSplit($S[0], ":")
 			If $a[0] >= 2 Then
-				$speed = ($size - $a[2]) / ($timediff - $a[1]) / 1.024
+				$speed = ($size - $a[2]) / ($timeDiff - $a[1]) / 1.024
+				If $speed < 1000 Then
+					$speed = StringFormat("%.1fKB/s", $speed)
+				Else
+					$speed = StringFormat("%.1fMB/s", $speed / 1024)
+				EndIf
 			EndIf
-			$progress = StringFormat('%.1f% - %.1fMB / %.1fMB - %.1fKB/s', _
+			$progress = StringFormat('%.1f% - %.1fMB / %.1fMB - %s', _
 					$size / $remotesize * 100, $size / 1024 / 1024, $remotesize / 1024 / 1024, $speed)
 			_SetVar("DLInfo", StringFormat("%d|%d||||%s ...  %s", $size, $remotesize, $LangDownloadingChrome, $progress))
 		EndIf
@@ -2908,7 +3344,7 @@ Func ChromeIsRunning($AppPath = "chrome.exe", $msg = "Do you want to close Chrom
 	$exe = StringRegExpReplace($AppPath, '.*\\', '')
 	For $j = 1 To 20
 		; close chrome
-		$list = WinList("[REGEXPCLASS:(?i)Chrome]")
+		$list = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]")
 		For $i = 1 To $list[0][0]
 			$pid = WinGetProcess($list[$i][1])
 			If StringInStr(GetProcPath($pid), $AppPath) Then
@@ -3017,7 +3453,7 @@ EndFunc   ;==>ReduceMemory
 ;                  Failure - set @error
 ;============================================================================================
 Func GetProcPath($pid = @AutoItPID)
-	If @OSArch <> "X86" And Not @AutoItX64 And Not _WinAPI_IsWow64Process($pid) Then ; much slow than dllcall method
+	If @OSArch <> "X86" And Not @AutoItX64 And Not _WinAPI_IsWow64Process($pid) Then ; much slower than dllcall method
 		Local $colItems = ""
 		Local $objWMIService = ObjGet("winmgmts:\\localhost\root\CIMV2")
 		$colItems = $objWMIService.ExecQuery("SELECT * FROM Win32_Process WHERE ProcessId = " & $pid, "WQL", _
@@ -3278,12 +3714,12 @@ Func GetValidIP($aIPs, $Key = "GIP")
 	Local $IP = UBound($aGoodIP) ? $aGoodIP[0][0] : ""
 	Return $IP
 EndFunc   ;==>GetValidIP
-Func OnSocketEvent($hWnd, $iMsgID, $WParam, $LParam)
+Func OnSocketEvent($hWnd, $iMsgID, $wParam, $lParam)
 	Local $WM_USER = 1024
-	Local $hSocket = $WParam
+	Local $hSocket = $wParam
 	Local $nSocket = $iMsgID - $WM_USER
-	Local $iError = _HiWord($LParam)
-	Local $iEvent = _LoWord($LParam)
+	Local $iError = _HiWord($lParam)
+	Local $iEvent = _LoWord($lParam)
 	If $nSocket < 0 Or $nSocket >= UBound($hSockets) Then
 		Return 'GUI_RUNDEFMSG'
 	EndIf

@@ -1,12 +1,16 @@
 ﻿
-latest=3.5.1
-url=https://github.com/cnjackchen/my-chrome/blob/master/release/MyChrome_v3.5.1.17z
-url_x64=https://github.com/cnjackchen/my-chrome/blob/master/release/MyChrome_v3.5.1_x64.7z
-update=修正简体中文情况下从离线安装包提取浏览器无效的问题。
-update_zh-TW=修正簡體中文情況下從離線安裝檔案提取瀏覽器無效的問題。
-update_en-US=Fixed a bug which leads to getting Chrome executable from Chrome installer not work if Chinese simplified is used.
+latest=3.6
+url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.6.7z
+url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.6_x64.7z
+update=1. 解决近期Canary无法更新问题。\n2. 代理设为“跟随系统”时支持pac。\n3. 增加老板键功能：默认Alt+z或鼠标右键双击隐藏浏览器并静音（需Win Vista+）。
+update_zh-TW=1. 解決近期Canary無法更新問題。\n2. 代理設為“跟隨系統”時支援pac。\n3. 增加老板鍵功能：預設Alt+z或滑鼠右鍵雙按隱藏瀏覽器並靜音（需Win Vista+）。
+update_en-US=1. Resolved Canary update problem.\n2. Support PAC when proxy is set to "System proxy".\n3. Added boss key:press Alt+z or double click mouse's right button to hide Chrome.
 
 inet_latest=3.2
 inet_url=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
 inet_url_x64=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
 inet_update=IP失效时尝试从第三方网站获取Google可用IP。
+
+inet_latest_x64=3.2
+inet_url_x64=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
+inet_update_x64=IP失效时尝试从第三方网站获取Google可用IP。
