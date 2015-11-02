@@ -4,7 +4,7 @@
 #AutoIt3Wrapper_Compile_Both=y
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Description=Google Chrome Portable
-#AutoIt3Wrapper_Res_Fileversion=3.6.0.0
+#AutoIt3Wrapper_Res_Fileversion=3.7.0.0
 #AutoIt3Wrapper_Res_LegalCopyright=甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -33,7 +33,7 @@
 #include "AppMute.au3"
 
 Global $WinVersion = _WinAPI_GetVersion()
-Global Const $AppVersion = "3.6" ; MyChrome version
+Global Const $AppVersion = "3.7" ; MyChrome version
 Global $AppName = StringRegExpReplace(@ScriptName, "\.[^.]*$", "")
 Global $inifile = @ScriptDir & "\" & $AppName & ".ini"
 Global $Language = IniRead($inifile, "Settings", "Language", "Auto")
@@ -41,9 +41,10 @@ Global $LangFile = LangCheck()
 Global $ProxyType, $ProxySever, $ProxyPort
 Global $aGoodIP[0][2] ; google ip [ip][time]
 Global $hSockets[1][3] ; [ip][socket][TimerInit()]
-Global $UserAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 Chrome/43.0.2357.130 Safari/537.36"
+Global $UserAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 Chrome/46.0.2490.80 Safari/537.36"
 
 #include "SimpleMultiThreading.au3"
+#include "IAccessible.au3"
 
 Opt("TrayAutoPause", 0)
 Opt("TrayMenuMode", 3) ; Default tray menu items (Script Paused/Exit) will not be shown.
@@ -62,6 +63,9 @@ Global $TaskBarDir = @AppDataDir & "\Microsoft\Internet Explorer\Quick Launch\Us
 Global $TaskBarLastChange
 Global $aExApp, $aExApp2, $aExAppPID[2]
 Global $dicKeys, $Bosskey, $BosskeyM, $Hide2Tray
+Global $KeepLastTab
+Global $MouseClick2CloseTab ; LDClick|RClick + MClick
+Global $Mouse2SwitchTab
 Global $maphost, $google_com
 Global $CancelAppUpdate
 
@@ -72,21 +76,34 @@ Global $hChannel, $hx86, $hUpdateInterval, $hLatestChromeVer, $hCurrentVer, $hUs
 Global $hAppUpdate, $hCacheDir, $hSelectCacheDir, $hCacheSize
 Global $hParams, $hDownloadThreads, $hProxyType, $hProxySever, $hProxyPort, $hMapHost, $hUseInetEx
 Global $hRunInBackground, $hLanguage, $hExApp, $hExAppAutoExit, $hExApp2
-Global $hBosskey, $hBosskeyM, $hBosskeyM1, $hWndProc, $hHide2Tray
+Global $hBosskey, $hBosskeyM, $hBosskeyM1, $hBosskeyM2, $hWndProc, $hHide2Tray
+Global $hKeepLastTab, $hDoubleClick2CloseTab, $hRightClick2CloseTab, $hMouse2SwitchTab
 
 Global $ChromeFileVersion, $ChromeLastChange, $LatestChromeVer, $LatestChromeUrls, $SelectedUrl
 Global $DefaultChromeDir, $DefaultChromeVer, $DefaultUserDataDir
 Global $TrayTipProgress = 0
 Global $iThreadPid, $DownloadThreads
 
-;~ Global $aDlInfo[6]
-;~ 0 - Latest Chrome Version / Bytes read so far
-;~ 1 - Latest Chrome url / The size of the download
-;~ 2 - Set to True if the download is complete, False if the download is still ongoing.
-;~ 3 - True if successful.
-;~ 4 - The error value for the download.
-;~ 5 - status info
-Global $hEvent, $ClientKey, $Progid
+; Mouse events
+Const $AU3_LCLICK = 0x0400 + 0x1A02
+Const $AU3_LDCLICK = 0x0400 + 0x1A04
+Const $AU3_LDROP = 0x0400 + 0x1A06
+Const $AU3_RCLICK = 0x0400 + 0x1B02
+Const $AU3_RDCLICK = 0x0400 + 0x1B04
+Const $AU3_RDROP = 0x0400 + 0x1B06
+Const $AU3_MCLICK = 0x0400 + 0x1C02
+Const $AU3_MDCLICK = 0x0400 + 0x1C04
+Const $AU3_MDROP = 0x0400 + 0x1C06
+Const $AU3_XCLICK = 0x0400 + 0x1D02
+Const $AU3_XDCLICK = 0x0400 + 0x1D04
+Const $AU3_XDROP = 0x0400 + 0x1D06
+Const $AU3_WHEELUP = 0x0400 + 0x1F02
+Const $AU3_WHEELDOWN = 0x0400 + 0x1F04
+;Const $WH_MOUSE = 7
+Global $ChromeIsHidden
+Global $hHookDll, $hHookLib, $hMouseHook
+
+Global $hEvent_Reg, $ClientKey, $Progid
 Global $aREG[6][3] = [[$HKEY_CURRENT_USER, 'Software\Clients\StartMenuInternet'], _
 		[$HKEY_LOCAL_MACHINE, 'Software\Clients\StartMenuInternet'], _
 		[$HKEY_CLASSES_ROOT, 'ftp'], _
@@ -126,7 +143,7 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "Channel", "Stable")
 	IniWrite($inifile, "Settings", "x86", 0)
 	IniWrite($inifile, "Settings", "ChromeSource", "Google")
-	IniWrite($inifile, "Settings", "LastCheckUpdate", "2015/01/01 00:00:00")
+	IniWrite($inifile, "Settings", "LastCheckUpdate", "2015/10/01 00:00:00")
 	IniWrite($inifile, "Settings", "UpdateInterval", 24)
 
 	If @OSLang = "0804" Then ; Maybe in China
@@ -143,34 +160,30 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "Params", "")
 	IniWrite($inifile, "Settings", "RunInBackground", 1)
 	IniWrite($inifile, "Settings", "AppUpdate", 1)
-	IniWrite($inifile, "Settings", "AppUpdateLastCheck", "2015/01/01 00:00:00")
+	IniWrite($inifile, "Settings", "AppUpdateLastCheck", "2015/10/01 00:00:00")
 	IniWrite($inifile, "Settings", "CheckDefaultBrowser", 1)
 	IniWrite($inifile, "Settings", "ExApp", "")
 	IniWrite($inifile, "Settings", "ExAppAutoExit", 1)
 	IniWrite($inifile, "Settings", "ExApp2", "")
-	IniWrite($inifile, "Settings", "Bosskey", "!z") ; Alt+z
-	IniWrite($inifile, "Settings", "BosskeyM", "RDClick")
+	IniWrite($inifile, "Settings", "Bosskey", "!x") ; Alt+x
+	IniWrite($inifile, "Settings", "BosskeyM", $AU3_RDCLICK)
 	IniWrite($inifile, "Settings", "Hide2Tray", 1)
+	IniWrite($inifile, "Settings", "MouseClick2CloseTab", $AU3_LDCLICK)
+	IniWrite($inifile, "Settings", "Mouse2SwitchTab", $AU3_WHEELDOWN & "|" & $AU3_WHEELUP)
+	IniWrite($inifile, "Settings", "KeepLastTab", 0)
 
 	; IPLookup
 	IniWrite($inifile, "IPLookup", "google_com", "")
 	IniWrite($inifile, "IPLookup", "pid", 0)
 	IniWrite($inifile, "IPLookup", "exe", ".\inet.exe")
 	IniWrite($inifile, "IPLookup", "UseInetEx", 0)
-	IniWrite($inifile, "IPLookup", "LastRun", "2015/01/01 00:00:00")
+	IniWrite($inifile, "IPLookup", "LastRun", "2015/10/01 00:00:00")
 	IniWrite($inifile, "IPLookup", "maphost", 0)
 	IniWrite($inifile, "IPLookup", "GIP", "")
 	IniWrite($inifile, "IPLookup", "GIPSource", "")
 EndIf
 
-#Region ========= Deal with old MyChrome =========
-If $AppVersion <> IniRead($inifile, "Settings", "AppVersion", "") Then
-	$FirstRun = 1
-	IniWrite($inifile, "Settings", "AppVersion", $AppVersion)
-EndIf
-#EndRegion ========= Deal with old MyChrome =========
-
-;~ read ini info
+; read ini info
 $ChromePath = IniRead($inifile, "Settings", "ChromePath", ".\Chrome\chrome.exe")
 $UserDataDir = IniRead($inifile, "Settings", "UserDataDir", ".\User Data")
 $CacheDir = IniRead($inifile, "Settings", "CacheDir", "")
@@ -183,7 +196,7 @@ If $ChromeSource = "sina.com.cn" Then
 Else
 	$get_latest_chrome_ver = "get_latest_chrome_ver"
 EndIf
-$LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2015/01/01 00:00:00")
+$LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2015/10/01 00:00:00")
 $UpdateInterval = IniRead($inifile, "Settings", "UpdateInterval", 24) * 1
 $ProxyType = IniRead($inifile, "Settings", "ProxyType", "DIRECT")
 $ProxySever = IniRead($inifile, "Settings", "UpdateProxy", "")
@@ -192,19 +205,42 @@ $DownloadThreads = IniRead($inifile, "Settings", "DownloadThreads", 3) * 1
 $Params = IniRead($inifile, "Settings", "Params", "")
 $RunInBackground = IniRead($inifile, "Settings", "RunInBackground", 1) * 1
 $AppUpdate = IniRead($inifile, "Settings", "AppUpdate", 1) * 1
-$AppUpdateLastCheck = IniRead($inifile, "Settings", "AppUpdateLastCheck", "2015/01/01 00:00:00")
+$AppUpdateLastCheck = IniRead($inifile, "Settings", "AppUpdateLastCheck", "2015/10/01 00:00:00")
 $CheckDefaultBrowser = IniRead($inifile, "Settings", "CheckDefaultBrowser", 1) * 1
 $ExApp = IniRead($inifile, "Settings", "ExApp", "")
 $ExAppAutoExit = IniRead($inifile, "Settings", "ExAppAutoExit", 1) * 1
 $ExApp2 = IniRead($inifile, "Settings", "ExApp2", "")
-$Bosskey = IniRead($inifile, "Settings", "Bosskey", "!z")
-$BosskeyM = IniRead($inifile, "Settings", "BosskeyM", "RDClick")
+$Bosskey = IniRead($inifile, "Settings", "Bosskey", "!x")
+$BosskeyM = IniRead($inifile, "Settings", "BosskeyM", $AU3_RDCLICK)
 $Hide2Tray = IniRead($inifile, "Settings", "Hide2Tray", 1) * 1
+$MouseClick2CloseTab = IniRead($inifile, "Settings", "MouseClick2CloseTab", $AU3_LDCLICK)
+$Mouse2SwitchTab = IniRead($inifile, "Settings", "Mouse2SwitchTab", $AU3_WHEELDOWN & "|" & $AU3_WHEELUP)
+$KeepLastTab = IniRead($inifile, "Settings", "KeepLastTab", 0) * 1
 $Inet = IniRead($inifile, "IPLookup", "exe", ".\inet.exe")
 $UseInetEx = IniRead($inifile, "IPLookup", "UseInetEx", "") * 1
-$IPLookupLastRun = IniRead($inifile, "IPLookup", "LastRun", "2015/01/01 00:00:00")
+$IPLookupLastRun = IniRead($inifile, "IPLookup", "LastRun", "2015/10/01 00:00:00")
 $maphost = IniRead($inifile, "IPLookup", "maphost", 0) * 1
 $UseInetEx = (FileExists($Inet) And $UseInetEx <> 0) * 1
+
+#Region ========= Deal with old MyChrome =========
+If $AppVersion <> IniRead($inifile, "Settings", "AppVersion", "") Then
+	$FirstRun = 1
+	IniWrite($inifile, "Settings", "AppVersion", $AppVersion)
+
+	If $BosskeyM Then
+		If $BosskeyM = "MDClick" Then
+			$BosskeyM = $AU3_MDCLICK
+		ElseIf $BosskeyM = "MDrop" Then
+			$BosskeyM = $AU3_MDROP
+		ElseIf $BosskeyM = "RDClick" Then
+			$BosskeyM = $AU3_RDCLICK
+		Else
+			$BosskeyM = $AU3_RDROP
+		EndIf
+		IniWrite($inifile, "Settings", "BosskeyM", $BosskeyM)
+	EndIf
+EndIf
+#EndRegion ========= Deal with old MyChrome =========
 
 Opt("ExpandEnvStrings", 1)
 EnvSet("APP", @ScriptDir)
@@ -327,8 +363,12 @@ If $CheckDefaultBrowser Then
 	CheckDefaultBrowser($ChromePath)
 EndIf
 
-WinWait("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]", "", 15) ; wait fo Chrome / Chromium window
-$hWnd_Browser = GethWndbyPID($AppPID_Browser, ".*Chrome.*")
+WinWait("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]", "", 10) ; wait fo Chrome / Chromium window
+For $i = 1 To 5
+	$hWnd_Browser = GethWndbyPID($AppPID_Browser, "Chrome", "Chrom")
+	If $hWnd_Browser Then ExitLoop
+	Sleep(2)
+Next
 
 Global $AppUserModelId
 If FileExists($TaskBarDir) Then ; win 7+
@@ -345,39 +385,33 @@ EndIf
 
 
 If $CheckDefaultBrowser Then ; register REG for notification
-	$hEvent = _WinAPI_CreateEvent()
+	$hEvent_Reg = _WinAPI_CreateEvent()
 	For $i = 0 To UBound($aREG) - 1
 		If $aREG[$i][1] Then
 			$aREG[$i][2] = _WinAPI_RegOpenKey($aREG[$i][0], $aREG[$i][1], $KEY_NOTIFY)
 			If $aREG[$i][2] Then
-				_WinAPI_RegNotifyChangeKeyValue($aREG[$i][2], $REG_NOTIFY_CHANGE_LAST_SET, 1, 1, $hEvent)
+				_WinAPI_RegNotifyChangeKeyValue($aREG[$i][2], $REG_NOTIFY_CHANGE_LAST_SET, 1, 1, $hEvent_Reg)
 			EndIf
 		EndIf
 	Next
+	OnAutoItExitRegister("CloseRegHandle")
 EndIf
 
-Global $ChromeIsHidden
-Global $IgnoreMouseEvent
-Global $DoubleClickTime = 500
-Global $hMouseEvent, $hMouseHook
-Global $aMouseEvent[2]
-;Global $iLBUTTONDOWN[2]
-;Global $iRBUTTONDOWN[2]
-;Global $iMBUTTONDOWN[2]
+If $KeepLastTab Or $MouseClick2CloseTab Or $Mouse2SwitchTab Then
+	AccessibleIni()
+EndIf
 
 If $Bosskey Then
 	HotKeySet($Bosskey, "Bosskey")
+EndIf
+If $BosskeyM Or $KeepLastTab Or $MouseClick2CloseTab Or $Mouse2SwitchTab Then
+	HookMouse()
+EndIf
+If $Bosskey Or $BosskeyM Then
 	OnAutoItExitRegister("ResumeWindows")
 EndIf
-If $BosskeyM Then
-	$DoubleClickTime = DllCall("user32.dll", "uint", "GetDoubleClickTime")[0]
-	HookMouse()
-	OnAutoItExitRegister("UnhookMouse")
-EndIf
 
-OnAutoItExitRegister("OnExit")
 AdlibRegister("UpdateCheck", 10000)
-
 ReduceMemory()
 
 ; wait for chrome exit
@@ -398,20 +432,20 @@ While 1
 			ExitLoop
 		EndIf
 		$AppIsRunning = 1
-		$hWnd_Browser = GethWndbyPID($AppPID_Browser, ".*Chrome.*")
+		$hWnd_Browser = GethWndbyPID($AppPID_Browser, "Chrome", "Chrom")
 	EndIf
 
 	If $TaskBarLastChange Then
 		CheckPinnedPrograms($ChromePath)
 	EndIf
 
-	If $hEvent And Not _WinAPI_WaitForSingleObject($hEvent, 0) Then
+	If $hEvent_Reg And Not _WinAPI_WaitForSingleObject($hEvent_Reg, 0) Then
 		; MsgBox(0, "", "Reg changed!")
 		Sleep(50)
 		CheckDefaultBrowser($ChromePath)
 		For $i = 0 To UBound($aREG) - 1
 			If $aREG[$i][2] Then
-				_WinAPI_RegNotifyChangeKeyValue($aREG[$i][2], $REG_NOTIFY_CHANGE_LAST_SET, 1, 1, $hEvent)
+				_WinAPI_RegNotifyChangeKeyValue($aREG[$i][2], $REG_NOTIFY_CHANGE_LAST_SET, 1, 1, $hEvent_Reg)
 			EndIf
 		Next
 	EndIf
@@ -460,124 +494,261 @@ Exit
 
 ; ==================== auto-exec codes ends ========================
 
-
 ; https://www.autoitscript.com/forum/topic/103362-monitoring-mouse-events/
-Func Mouse_Event($nCode, $wParam, $lParam)
-	Local $info, $time, $timeDiff
-	If $IgnoreMouseEvent Or $nCode < 0 Or $wParam = $WM_MOUSEWHEEL Or $wParam = $WM_MOUSEMOVE Then
-		Return _WinAPI_CallNextHookEx($hMouseHook, $nCode, $wParam, $lParam) ; Continue processing
+Func Mouse_Event($hGUI, $MsgID, $wParam, $lParam)
+	If WinGetProcess($wParam) <> $AppPID_Browser Then
+		Return
 	EndIf
 
-	$tPoint = _WinAPI_GetMousePos()
+	$x = BitAND($lParam, 0x0000FFFF) ;LoWord
+	$y = BitShift($lParam, 16) ;HiWord
+	$tPoint = DllStructCreate($tagPOINT)
+	$tPoint.X = $x
+	$tPoint.Y = $y
 	$hWnd = _WinAPI_WindowFromPoint($tPoint)
-	If (WinGetProcess($hWnd) <> $AppPID_Browser) Or (Not StringInStr(_WinAPI_GetClassName($hWnd), "Chrome_RenderWidgetHostHWND")) Then
-		Return _WinAPI_CallNextHookEx($hMouseHook, $nCode, $wParam, $lParam)
+	$class = _WinAPI_GetClassName($hWnd)
+
+	$blocked = BitAND($MsgID, 0x00000001)
+	$event = BitAND($MsgID, 0xFFFFFFFE)
+
+	If $event = $AU3_RCLICK And _IsPressed("10") Then ; Shift + right click
+		If $blocked Then
+			PassMouseEvent($event)
+		EndIf
+		Return
 	EndIf
 
-	;$tagPOINT = "struct;long X;long Y;endstruct"
-	Local Const $MSLLHOOKSTRUCT = $tagPOINT & ";dword mouseData;dword flags;dword time;ulong_ptr dwExtraInfo"
-	$info = DllStructCreate($MSLLHOOKSTRUCT, $lParam)
-	$time = DllStructGetData($info, "time")
-	$timeDiff = $time - $aMouseEvent[1]
-	Switch $wParam
-		;Case $WM_LBUTTONDOWN
-		;	$iLBUTTONDOWN[0] = 1
-		;	$iLBUTTONDOWN[1] = $tPoint
+	;$time = TimerInit()
 
-		;Case $WM_RBUTTONDOWN
-		;	$iRBUTTONDOWN[0] = 1
-		;	$iRBUTTONDOWN[1] = $tPoint
+	Local $blockEvent = 0
+	If $class = "Chrome_RenderWidgetHostHWND" Then
+		If $event = $BosskeyM Then
+			If $blocked Then
+				DllCall($hHookDll, "int", "IgnoreEvents", "int", 1)
+				Switch $event
+					Case $AU3_RDCLICK, $AU3_RDROP
+						MouseUp("left") ; disable context menu
 
-		;Case $WM_MBUTTONDOWN
-		;	$iMBUTTONDOWN[0] = 1
-		;	$iMBUTTONDOWN[1] = $tPoint
-
-		;Case $WM_LBUTTONUP
-		;	$iLBUTTONDOWN[0] = 0
-		;	$aMouseEvent[1] = $time
-		;	If $aMouseEvent[0] = "LClick" And $timeDiff < $DoubleClickTime Then
-		;		$aMouseEvent[0] = "LDClick"
-		;	ElseIf Pixel_Distance(DllStructGetData($tPoint, "X"), DllStructGetData($tPoint, "Y"), _
-		;			DllStructGetData($iLBUTTONDOWN[1], "X"), DllStructGetData($iLBUTTONDOWN[1], "Y")) > 50 Then
-		;		$aMouseEvent[0] = "LDrop"
-		;	Else
-		;		$aMouseEvent[0] = "LClick"
-		;	EndIf
-
-		Case $WM_RBUTTONUP
-			;	$iRBUTTONDOWN[0] = 0
-			$aMouseEvent[1] = $time
-			If $aMouseEvent[0] = "RClick" And $timeDiff < $DoubleClickTime Then
-				$aMouseEvent[0] = "RDClick"
-				;	ElseIf Pixel_Distance(DllStructGetData($tPoint, "X"), DllStructGetData($tPoint, "Y"), _
-				;			DllStructGetData($iRBUTTONDOWN[1], "X"), DllStructGetData($iRBUTTONDOWN[1], "Y")) > 50 Then
-				;		$aMouseEvent[0] = "RDrop"
-			Else
-				$aMouseEvent[0] = "RClick"
+					Case $AU3_MDROP
+						MouseUp("middle")
+					Case $AU3_MDCLICK
+						MouseDown("middle")
+				EndSwitch
+				Sleep(50)
+				DllCall($hHookDll, "int", "IgnoreEvents", "int", 0)
+				$blockEvent = 1
 			EndIf
-
-		Case $WM_MBUTTONUP
-			;	$iMBUTTONDOWN[0] = 0
-			$aMouseEvent[1] = $time
-			If $aMouseEvent[0] = "MClick" And $timeDiff < $DoubleClickTime Then
-				$aMouseEvent[0] = "MDClick"
-				;	ElseIf Pixel_Distance(DllStructGetData($tPoint, "X"), DllStructGetData($tPoint, "Y"), _
-				;			DllStructGetData($iMBUTTONDOWN[1], "X"), DllStructGetData($iMBUTTONDOWN[1], "Y")) > 50 Then
-				;		$aMouseEvent[0] = "MDrop"
-			Else
-				$aMouseEvent[0] = "MClick"
-			EndIf
-	EndSwitch
-
-	If $aMouseEvent[1] = $time And StringInStr($BosskeyM, $aMouseEvent[0]) Then
-		;ConsoleWrite(@CRLF & @HOUR & @MIN & @SEC & @MSEC & " : " & $aMouseEvent[0] & @crlf)
-		AdlibRegister("Bosskey", 10)
-
-		; disable context menu
-		If StringLeft($aMouseEvent[0], 1) = "R" Then
-			$IgnoreMouseEvent = True
-			MouseUp("right")
-			MouseUp("right")
-			$IgnoreMouseEvent = False
-			Return 1
+			Bosskey()
+		EndIf
+	ElseIf $class = "Chrome_WidgetWin_1" Then
+		If ($KeepLastTab And ($event = $AU3_MCLICK Or $event = $AU3_LCLICK)) Or _
+				StringInStr($MouseClick2CloseTab, $event) Or _
+				StringInStr($Mouse2SwitchTab, $event) Then
+			$blockEvent = TabProcess($hWnd, $event, $x, $y)
 		EndIf
 	EndIf
 
-	Return _WinAPI_CallNextHookEx($hMouseHook, $nCode, $wParam, $lParam) ; Continue processing
+	;ConsoleWrite(Round(TimerDiff($time), 1) & " Event: " & $event & " on " & $class & ", block: " & $blocked & " --> " & $blockEvent & @LF)
+
+	If $blocked And Not $blockEvent Then
+		PassMouseEvent($event)
+	EndIf
 EndFunc   ;==>Mouse_Event
 
+Func PassMouseEvent($event)
+	DllCall($hHookDll, "int", "IgnoreEvents", "int", 1)
+
+	Switch $event
+		Case $AU3_LCLICK, $AU3_LDROP
+			MouseUp("left")
+		Case $AU3_LDCLICK
+			MouseDown("left")
+
+		Case $AU3_RCLICK, $AU3_RDCLICK, $AU3_RDROP
+			MouseUp("right")
+
+		Case $AU3_MCLICK, $AU3_MDROP
+			MouseUp("middle")
+		Case $AU3_MDCLICK
+			MouseDown("middle")
+
+		Case $AU3_XCLICK, $AU3_XDROP
+			_WinAPI_Mouse_Event($MOUSEEVENTF_XUP)
+		Case $AU3_XDCLICK
+			_WinAPI_Mouse_Event($MOUSEEVENTF_XDOWN)
+	EndSwitch
+
+	Sleep(50)
+	DllCall($hHookDll, "int", "IgnoreEvents", "int", 0)
+EndFunc   ;==>PassMouseEvent
+
 Func HookMouse()
-	$hMouseEvent = DllCallbackRegister("Mouse_Event", "int", "int;ptr;ptr")
-	$hMouseHook = _WinAPI_SetWindowsHookEx($WH_MOUSE_LL, DllCallbackGetPtr($hMouseEvent), _WinAPI_GetModuleHandle(0))
+	Local $hookdll, $iPID = 0
+	If @AutoItX64 Then
+		$hookdll = $ChromeDir & "\hook64.dll"
+		FileInstall("hook64.dll", $hookdll, 1)
+	Else
+		$hookdll = $ChromeDir & "\hook.dll"
+		FileInstall("hook.dll", $hookdll, 1)
+	EndIf
+
+	$hHookDll = DllOpen($hookdll)
+	$hHookLib = _WinAPI_LoadLibrary($hookdll)
+	$iThread = _WinAPI_GetWindowThreadProcessId($hWnd_Browser, $iPID)
+	$mouseHOOKproc = _WinAPI_GetProcAddress($hHookLib, "MouseProc")
+	$hMouseHook = _WinAPI_SetWindowsHookEx($WH_MOUSE, $mouseHOOKproc, $hHookLib, $iThread)
+
+	Local $mouse, $events, $blockevents
+
+	$events = "|" & $BosskeyM & "|" & $MouseClick2CloseTab
+	If $KeepLastTab Then
+		$events &= "|" & $AU3_MCLICK
+	EndIf
+	$events &= "|" & $Mouse2SwitchTab
+	;ConsoleWrite('Mouse events registered: ' & $events & @CRLF)
+
+	$blockevents = $AU3_RCLICK & "|" & $AU3_RDCLICK & "|" & $AU3_RDROP & "|" & $AU3_MCLICK
+
+	DllCall($hHookDll, "int", "SetValuesMouse", _
+			"hwnd", $__hwnd_vars, "hwnd", $hMouseHook)
+
+	DllCall($hHookDll, "int", "MouseEvents", "str", $events)
+	DllCall($hHookDll, "int", "BlockEvents", "str", $blockevents)
+
+	;GUIRegisterMsg($AU3_LCLICK, "Mouse_Event")
+	;GUIRegisterMsg($AU3_LCLICK + 1, "Mouse_Event")
+	GUIRegisterMsg($AU3_LDCLICK, "Mouse_Event")
+	GUIRegisterMsg($AU3_LDCLICK + 1, "Mouse_Event")
+	GUIRegisterMsg($AU3_LDROP, "Mouse_Event")
+	GUIRegisterMsg($AU3_LDROP + 1, "Mouse_Event")
+
+	GUIRegisterMsg($AU3_RCLICK, "Mouse_Event")
+	GUIRegisterMsg($AU3_RCLICK + 1, "Mouse_Event")
+	GUIRegisterMsg($AU3_RDCLICK, "Mouse_Event")
+	GUIRegisterMsg($AU3_RDCLICK + 1, "Mouse_Event")
+	GUIRegisterMsg($AU3_RDROP, "Mouse_Event")
+	GUIRegisterMsg($AU3_RDROP + 1, "Mouse_Event")
+
+	GUIRegisterMsg($AU3_MCLICK, "Mouse_Event")
+	GUIRegisterMsg($AU3_MCLICK + 1, "Mouse_Event")
+	GUIRegisterMsg($AU3_MDCLICK, "Mouse_Event")
+	GUIRegisterMsg($AU3_MDCLICK + 1, "Mouse_Event")
+	GUIRegisterMsg($AU3_MDROP, "Mouse_Event")
+	GUIRegisterMsg($AU3_MDROP + 1, "Mouse_Event")
+
+	GUIRegisterMsg($AU3_XCLICK, "Mouse_Event")
+	GUIRegisterMsg($AU3_XCLICK + 1, "Mouse_Event")
+	GUIRegisterMsg($AU3_XDCLICK, "Mouse_Event")
+	GUIRegisterMsg($AU3_XDCLICK + 1, "Mouse_Event")
+	GUIRegisterMsg($AU3_XDROP, "Mouse_Event")
+	GUIRegisterMsg($AU3_XDROP + 1, "Mouse_Event")
+
+	GUIRegisterMsg($AU3_WHEELUP, "Mouse_Event")
+	GUIRegisterMsg($AU3_WHEELUP + 1, "Mouse_Event")
+	GUIRegisterMsg($AU3_WHEELDOWN, "Mouse_Event")
+	GUIRegisterMsg($AU3_WHEELDOWN + 1, "Mouse_Event")
+
+	OnAutoItExitRegister("UnhookMouse")
 EndFunc   ;==>HookMouse
 Func UnhookMouse()
 	_WinAPI_UnhookWindowsHookEx($hMouseHook)
-	DllCallbackFree($hMouseEvent)
+	_WinAPI_FreeLibrary($hHookLib)
+	DllClose($hHookDll)
 EndFunc   ;==>UnhookMouse
 
-Func Pixel_Distance($x1, $y1, $x2, $y2) ;Pythagoras theorem for 2D
-	Local $a, $b, $c
-	If $x2 = $x1 And $y2 = $y1 Then
-		Return 0
-	Else
-		$a = $y2 - $y1
-		$b = $x2 - $x1
-		$c = Sqrt($a * $a + $b * $b)
-		Return $c
+
+Func TabProcess($hWnd, $action = $AU3_RCLICK, $mouseX = 0, $mouseY = 0)
+	; Possible $action values: $AU3_LCLICK, $AU3_LDCLICK, $AU3_RCLICK, $AU3_MCLICK, $AU3_WHEELUP, $AU3_WHEELDOWN
+	;ConsoleWrite($action & ", Mouse positon: $mouseX " & $mouseX & ", $mouseY " & $mouseY & @CRLF)
+
+	Local $pAcc, $oAcc, $tVarChild
+	AccessibleObjectFromPoint($mouseX, $mouseY, $pAcc, $tVarChild)
+	If @error Then Return
+	$oAcc = ObjCreateInterface($pAcc, $sIID_IAccessible, $dtagIAccessible)
+	If Not IsObj($oAcc) Then Return
+
+	Local $iRole, $aTab[2]
+	$oAcc.get_accRole(0, $iRole)
+	If $iRole = $ROLE_SYSTEM_PAGETAB Then
+		Dim $aTab[2] = [$pAcc, $oAcc]
+	ElseIf $iRole <> $ROLE_SYSTEM_STATICTEXT And $iRole <> $ROLE_SYSTEM_PUSHBUTTON Then
+		Return
 	EndIf
-EndFunc   ;==>Pixel_Distance
+
+	If Not IsObj($aTab[1]) Then
+		$aTab = AccessibleParent($oAcc, $ROLE_SYSTEM_PAGETAB, 1)
+		If Not IsArray($aTab) Then
+			;ConsoleWrite("Mouse is not on a page tab. Ignore and return..." & @CRLF)
+			Return
+		EndIf
+	EndIf
+
+	;ConsoleWrite("Mouse is on a page tab. " & @CRLF)
+
+	If $action = $AU3_WHEELUP Then
+		Send("^{PGUP}")
+		Return
+	ElseIf $action = $AU3_WHEELDOWN Then
+		Send("^{PGDN}")
+		Return
+	EndIf
+
+	Local $iTab = 0
+	$aTabList = AccessibleParent($aTab[1], $ROLE_SYSTEM_PAGETABLIST, 1)
+	If Not IsArray($aTabList) Or $aTabList[1].get_accChildCount($iTab) Or Not $iTab Then
+		Return
+	EndIf
+	$iTab -= 1
+	If $iTab > 1 Then ; more than one tab
+		;ConsoleWrite("There are " & $iTab & " tabs within Chrome window. " & @CRLF)
+		If $action = $AU3_LDCLICK Or $action = $AU3_RCLICK Then
+
+			DllCall($hHookDll, "int", "IgnoreEvents", "int", 1)
+			MouseClick("middle", $mouseX, $mouseY)
+			Sleep(10)
+			DllCall($hHookDll, "int", "IgnoreEvents", "int", 0)
+			Return 1 ; block evnet
+
+			;$aTabClose = AccessibleChildren($aTab[0], $aTab[1], $ROLE_SYSTEM_PUSHBUTTON, 0, 1)
+			;If IsArray($aTabClose) Then
+			;	$aTabClose[1].accDoDefaultAction(0)
+			;	Return 1 ; block event
+			;EndIf
+		EndIf
+		Return
+	EndIf
+
+	;ConsoleWrite("There is ONLY one tab within Chrome window. " & @CRLF)
+
+	If $KeepLastTab Then
+		Send("^t")
+		Sleep(50)
+	EndIf
+
+	If $action = $AU3_LDCLICK Or $action = $AU3_RCLICK Then
+		;ConsoleWrite("Close the old tab and return..." & @CRLF)
+
+		DllCall($hHookDll, "int", "IgnoreEvents", "int", 1)
+		MouseClick("middle", $mouseX, $mouseY)
+		Sleep(10)
+		DllCall($hHookDll, "int", "IgnoreEvents", "int", 0)
+
+		;$aTabClose = AccessibleChildren($aTab[0], $aTab[1], $ROLE_SYSTEM_PUSHBUTTON, 0, 1)
+		;If Not IsArray($aTabClose) Then Return
+		;$aTabClose[1].accDoDefaultAction(0)
+	EndIf
+
+	If $action = $AU3_RCLICK Then
+		Return 1 ; block event
+	EndIf
+EndFunc   ;==>TabProcess
+
 
 Func Bosskey()
-	AdlibUnRegister("Bosskey")
-
-	If $BosskeyM Then
-		UnhookMouse()
-	EndIf
-
+	Local $aList, $pid
 	If $ChromeIsHidden Then
-		UnhideChrome()
+		ResumeWindows()
 	Else
-		Local $aList, $pid
 		$aList = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]")
 		;_ArrayDisplay($aList)
 		If $aList[0][0] < 1 Then Return
@@ -586,30 +757,23 @@ Func Bosskey()
 				$pid = WinGetProcess($aList[$i][1])
 				If $pid = $AppPID_Browser Then
 					WinSetState($aList[$i][1], "", @SW_HIDE)
+					$ChromeIsHidden = 1
 				EndIf
 			EndIf
 		Next
-		$ChromeIsHidden = 1
 
-		If $WinVersion >= "6.0" Then ; Windows Vista or later
+		If VersionCompare($WinVersion, "6.0") >= 0 Then ; Windows Vista or later
 			Audio_SetAppMute($AppPID_Browser, 1)
 		EndIf
 
 		If $Hide2Tray Then
 			TraySetIcon($ChromePath)
-			TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "UnhideChrome")
+			TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "ResumeWindows")
 			TraySetState(1)
 			TraySetToolTip(StringFormat(lang("GUI", "UnhideChrome", 'Chrome已隐藏\n点击取消隐藏'), 0))
 		EndIf
 	EndIf
 EndFunc   ;==>Bosskey
-
-Func UnhideChrome()
-	ResumeWindows()
-	If $BosskeyM Then
-		HookMouse()
-	EndIf
-EndFunc   ;==>UnhideChrome
 
 Func ResumeWindows()
 	If $Hide2Tray Then
@@ -627,13 +791,12 @@ Func ResumeWindows()
 			$pid = WinGetProcess($aList[$i][1])
 			If $pid = $AppPID_Browser Or GetProcPath($pid) = $ChromePath Then
 				WinSetState($aList[$i][1], "", @SW_SHOW)
-				WinActivate($aList[$i][1])
 			EndIf
 		EndIf
 	Next
 	$ChromeIsHidden = 0
 
-	If $WinVersion >= "6.0" Then
+	If VersionCompare($WinVersion, "6.0") >= 0 Then
 		Audio_SetAppMute($AppPID_Browser, 0)
 	EndIf
 EndFunc   ;==>ResumeWindows
@@ -737,8 +900,8 @@ Func GetIEProxy(ByRef $Sever, ByRef $Port)
 	EndIf
 EndFunc   ;==>GetIEProxy
 
-Func GethWndbyPID($pid, $class = "")
-	$list = WinList("[REGEXPCLASS:(?i)" & $class & "]")
+Func GethWndbyPID($pid, $class = ".*", $title = ".*")
+	$list = WinList("[REGEXPCLASS:(?i)" & $class & "; REGEXPTITLE:(?i)" & $title & "]")
 	For $i = 1 To $list[0][0]
 		If Not BitAND(WinGetState($list[$i][1]), 2) Then ContinueLoop ; ignore hidden windows
 		If $pid = WinGetProcess($list[$i][1]) Then
@@ -814,14 +977,14 @@ Func CheckEnv()
 	EndIf
 EndFunc   ;==>CheckEnv
 
-Func OnExit()
-	If $hEvent Then
-		_WinAPI_CloseHandle($hEvent)
+Func CloseRegHandle()
+	If $hEvent_Reg Then
+		_WinAPI_CloseHandle($hEvent_Reg)
 		For $i = 0 To UBound($aREG) - 1
 			_WinAPI_RegCloseKey($aREG[$i][2])
 		Next
 	EndIf
-EndFunc   ;==>OnExit
+EndFunc   ;==>CloseRegHandle
 
 Func RunIPlookup()
 	Local $pid = IniRead($inifile, "IPLookup", "pid", 0)
@@ -913,7 +1076,7 @@ Func CheckPinnedPrograms($browser_path)
 				If Not $AppUserModelId Then
 					If Not $hWnd_Browser Then
 						Sleep(3000)
-						$hWnd_Browser = GethWndbyPID($AppPID_Browser, ".*Chrome.*")
+						$hWnd_Browser = GethWndbyPID($AppPID_Browser, "Chrome", "Chrom")
 					EndIf
 					$AppUserModelId = _WindowAppId($hWnd_Browser)
 					If Not $AppUserModelId Then
@@ -1449,9 +1612,9 @@ Func Settings()
 	GUICtrlSetTip(-1, lang("GUI", "AddAppTips", '添加外部程序'))
 	GUICtrlSetOnEvent(-1, "GUI_AddExApp2")
 
-	GUICtrlCreateGroup(lang("GUI", "Bosskey", '老板键*'), 10, 270, 480, 90)
-	GUICtrlCreateLabel(lang("GUI", "Hotkey", '键盘：'), 20, 300, 110, 20)
-	$hBosskey = GUICtrlCreateInput("", 130, 296, 140, 20)
+	GUICtrlCreateGroup(lang("GUI", "Bosskey", '老板键*'), 10, 260, 480, 90)
+	GUICtrlCreateLabel(lang("GUI", "Hotkey", '键盘：'), 20, 290, 110, 20)
+	$hBosskey = GUICtrlCreateInput("", 130, 286, 140, 20)
 
 	Local $Key = StringRegExpReplace($Bosskey, '[!+#^]+', '')
 	Local $key1
@@ -1479,28 +1642,59 @@ Func Settings()
 
 	Local $mButton = lang("GUI", "MiddleButton", '中键')
 	Local $rButton = lang("GUI", "RightButton", '右键')
-	$hBosskeyM = GUICtrlCreateCheckbox(lang("GUI", "MouseClick", '鼠标双击：'), 20, 326, 150, 20)
+	Local $DBClick = lang("GUI", "DoubleClick", '双击')
+	Local $DragDrop = lang("GUI", "DragDrop", '拖拽')
+	$hBosskeyM = GUICtrlCreateCheckbox(lang("GUI", "MouseClick", '鼠标：'), 20, 316, 110, 20)
 	GUICtrlSetOnEvent(-1, "Gui_EventMouseClick")
-	$hBosskeyM1 = GUICtrlCreateCombo("", 170, 326, 100, 20, $CBS_DROPDOWNLIST)
+	$hBosskeyM1 = GUICtrlCreateCombo("", 130, 316, 140, 20, $CBS_DROPDOWNLIST)
+	$hBosskeyM2 = GUICtrlCreateCombo("", 290, 316, 140, 20, $CBS_DROPDOWNLIST)
 
-	Local $button = $rButton
-	If StringLeft($BosskeyM, 1) = "M" Then
+	Local $button, $act
+	If $BosskeyM = $AU3_MDCLICK Or $BosskeyM = $AU3_MDROP Then
 		$button = $mButton
+	Else
+		$button = $rButton
 	EndIf
+	If $BosskeyM = $AU3_RDROP Or $BosskeyM = $AU3_MDROP Then
+		$act = $DragDrop
+	Else
+		$act = $DBClick
+	EndIf
+
 	GUICtrlSetData($hBosskeyM1, $mButton & "|" & $rButton, $button)
+	GUICtrlSetData($hBosskeyM2, $DBClick & "|" & $DragDrop, $act)
 	If $BosskeyM Then
 		GUICtrlSetState($hBosskeyM, $GUI_CHECKED)
 	Else
 		GUICtrlSetState($hBosskeyM1, $GUI_DISABLE)
+		GUICtrlSetState($hBosskeyM2, $GUI_DISABLE)
 	EndIf
 
 	$dicKeys = CreateKeysDic()
 	$hFuncHotkey = DllCallbackRegister('GUI_EventHotkey', 'lresult', 'hwnd;uint;wparam;lparam')
 	$hWndProc = _WinAPI_SetWindowLong(GUICtrlGetHandle($hBosskey), $GWL_WNDPROC, DllCallbackGetPtr($hFuncHotkey))
 
-	$hHide2Tray = GUICtrlCreateCheckbox(lang("GUI", "Hide2Tray", ' 隐藏到系统托盘'), 300, 296, -1, 20)
+	$hHide2Tray = GUICtrlCreateCheckbox(lang("GUI", "Hide2Tray", ' 隐藏到系统托盘'), 290, 286, -1, 20)
 	If $Hide2Tray Then
 		GUICtrlSetState($hHide2Tray, $GUI_CHECKED)
+	EndIf
+
+	$hDoubleClick2CloseTab = GUICtrlCreateCheckbox(lang("GUI", "DoubleClick2CloseTab", '双击关闭标签页'), 20, 366, -1, 20)
+	$hRightClick2CloseTab = GUICtrlCreateCheckbox(lang("GUI", "RightClick2CloseTab", '右键关闭标签页'), 20, 396, -1, 20)
+	GUICtrlSetTip(-1, lang("GUI", "RightClick2CloseTabTips", 'Shift + 右键仍可显示菜单'))
+	$hMouse2SwitchTab = GUICtrlCreateCheckbox(lang("GUI", "Mouse2SwitchTab", '滚轮切换标签页'), 240, 366, -1, 20)
+	$hKeepLastTab = GUICtrlCreateCheckbox(lang("GUI", "KeepLastTab", '保留最后一个标签页'), 240, 396, -1, 20)
+	If StringInStr($MouseClick2CloseTab, $AU3_LDCLICK) Then
+		GUICtrlSetState($hDoubleClick2CloseTab, $GUI_CHECKED)
+	EndIf
+	If StringInStr($MouseClick2CloseTab, $AU3_RCLICK) Then
+		GUICtrlSetState($hRightClick2CloseTab, $GUI_CHECKED)
+	EndIf
+	If StringInStr($Mouse2SwitchTab, $AU3_WHEELDOWN) Then
+		GUICtrlSetState($hMouse2SwitchTab, $GUI_CHECKED)
+	EndIf
+	If $KeepLastTab Then
+		GUICtrlSetState($hKeepLastTab, $GUI_CHECKED)
 	EndIf
 
 	GUICtrlCreateTabItem("")
@@ -1536,8 +1730,10 @@ EndFunc   ;==>Settings
 Func Gui_EventMouseClick()
 	If GUICtrlRead($hBosskeyM) = $GUI_CHECKED Then
 		GUICtrlSetState($hBosskeyM1, $GUI_ENABLE)
+		GUICtrlSetState($hBosskeyM2, $GUI_ENABLE)
 	Else
 		GUICtrlSetState($hBosskeyM1, $GUI_DISABLE)
+		GUICtrlSetState($hBosskeyM2, $GUI_DISABLE)
 	EndIf
 EndFunc   ;==>Gui_EventMouseClick
 
@@ -1956,21 +2152,52 @@ Func GUI_SettingsApply()
 		$Hide2Tray = 0
 	EndIf
 
-
 	Local $mButton = lang("GUI", "MiddleButton", '中键')
-	Local $Key = GUICtrlRead($hBosskeyM)
-	If $Key <> $GUI_CHECKED Then
+	Local $DBClick = lang("GUI", "DoubleClick", '双击')
+	If GUICtrlRead($hBosskeyM) <> $GUI_CHECKED Then
 		$BosskeyM = ""
 	Else
 		If GUICtrlRead($hBosskeyM1) = $mButton Then
-			$BosskeyM = "MDClick"
+			If GUICtrlRead($hBosskeyM2) = $DBClick Then
+				$BosskeyM = $AU3_MDCLICK
+			Else
+				$BosskeyM = $AU3_MDROP
+			EndIf
 		Else
-			$BosskeyM = "RDClick"
+			If GUICtrlRead($hBosskeyM2) = $DBClick Then
+				$BosskeyM = $AU3_RDCLICK
+			Else
+				$BosskeyM = $AU3_RDROP
+			EndIf
 		EndIf
 	EndIf
+
+	$MouseClick2CloseTab = ""
+	If GUICtrlRead($hDoubleClick2CloseTab) = $GUI_CHECKED Then
+		$MouseClick2CloseTab &= "|" & $AU3_LDCLICK
+	EndIf
+	If GUICtrlRead($hRightClick2CloseTab) = $GUI_CHECKED Then
+		$MouseClick2CloseTab &= "|" & $AU3_RCLICK
+	EndIf
+	$MouseClick2CloseTab = StringTrimLeft($MouseClick2CloseTab, 1)
+
+	If GUICtrlRead($hMouse2SwitchTab) = $GUI_CHECKED Then
+		$Mouse2SwitchTab = $AU3_WHEELDOWN & "|" & $AU3_WHEELUP
+	Else
+		$Mouse2SwitchTab = ""
+	EndIf
+	If GUICtrlRead($hKeepLastTab) = $GUI_CHECKED Then
+		$KeepLastTab = 1
+	Else
+		$KeepLastTab = 0
+	EndIf
+
 	IniWrite($inifile, "Settings", "Bosskey", $Bosskey)
 	IniWrite($inifile, "Settings", "BosskeyM", $BosskeyM)
 	IniWrite($inifile, "Settings", "Hide2Tray", $Hide2Tray)
+	IniWrite($inifile, "Settings", "MouseClick2CloseTab", $MouseClick2CloseTab)
+	IniWrite($inifile, "Settings", "Mouse2SwitchTab", $Mouse2SwitchTab)
+	IniWrite($inifile, "Settings", "KeepLastTab", $KeepLastTab)
 
 	SplitPath($ChromePath, $ChromeDir, $ChromeExe)
 	Opt("ExpandEnvStrings", 1)
@@ -2030,15 +2257,12 @@ Func GUI_CheckChromeInSystem($Channel)
 	If StringInStr($Channel, "Chromium") Then
 		$DefaultUserDataDir = @LocalAppDataDir & "\Chromium\User Data"
 		$dir = "Chromium\Application"
-		$Subkey = "Software\Chromium\BLBeacon"
 	ElseIf StringInStr($Channel, "Canary") Then
 		$DefaultUserDataDir = @LocalAppDataDir & "\Google\Chrome SxS\User Data"
 		$dir = "Google\Chrome SxS\Application"
-		$Subkey = "Software\Google\Chrome\BLBeacon"
 	Else ; chrome stable / beta / dev
 		$DefaultUserDataDir = @LocalAppDataDir & "\Google\Chrome\User Data"
 		$dir = "Google\Chrome\Application"
-		$Subkey = "Software\Google\Chrome\BLBeacon"
 	EndIf
 
 	If FileExists($DefaultUserDataDir & "\Local State") Then
@@ -2050,19 +2274,38 @@ Func GUI_CheckChromeInSystem($Channel)
 
 	; intalled as admin @ProgramFilesDir
 	$DefaultChromeDir = @ProgramFilesDir & "\" & $dir
-	$DefaultChromeVer = RegRead("HKLM64\" & $Subkey, $value)
-	If FileExists($DefaultChromeDir & "\chrome.exe") And FileExists($DefaultChromeDir & "\" & $DefaultChromeVer & "\chrome.dll") Then
-		Return 1
+	If FileExists($DefaultChromeDir & "\chrome.exe") Then
+		$DefaultChromeVer = FindChromeVer($DefaultChromeDir)
+		If $DefaultChromeVer Then Return 1
 	EndIf
 
 	; @LocalAppDataDir
 	$DefaultChromeDir = @LocalAppDataDir & "\" & $dir
-	$DefaultChromeVer = RegRead("HKCU\" & $Subkey, $value)
-	If FileExists($DefaultChromeDir & "\chrome.exe") And FileExists($DefaultChromeDir & "\" & $DefaultChromeVer & "\chrome.dll") Then
-		Return 1
+	If FileExists($DefaultChromeDir & "\chrome.exe") Then
+		$DefaultChromeVer = FindChromeVer($DefaultChromeDir)
+		If $DefaultChromeVer Then Return 1
 	EndIf
 EndFunc   ;==>GUI_CheckChromeInSystem
 
+Func FindChromeVer($dir)
+	Local $hSearch = FileFindFirstFile($dir & "\*.*")
+	If $hSearch = -1 Then Return
+
+	Local $dirName, $version = 0
+	While 1
+		$dirName = FileFindNextFile($hSearch)
+		If @error Then ExitLoop
+
+		If StringInStr(FileGetAttrib($dir & "\" & $dirName), "D") And FileExists($dir & "\" & $dirName & "\chrome.dll") Then
+			If VersionCompare($dirName, $version) Then
+				$version = $dirName
+			EndIf
+		EndIf
+	WEnd
+
+	FileClose($hSearch)
+	Return $version
+EndFunc   ;==>FindChromeVer
 
 Func GUI_ShowLatestChromeVer()
 	AdlibUnRegister("GUI_ShowLatestChromeVer")
@@ -2483,7 +2726,7 @@ Func get_latest_chrome_ver_sina($Channel, $x86 = 0, $inifile = "", $Proxy = "")
 		DEV: down_id=5 / dwon_id=6
 	#ce
 	Local $down_id, $need_x86
-	If $x86 Or $OSArch = "x86" Or $WinVersion < "6.0" Then
+	If $x86 Or $OSArch = "x86" Or VersionCompare($WinVersion, "6.0") < 0 Then
 		$need_x86 = True
 	EndIf
 	Switch $Channel
@@ -2649,7 +2892,7 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 
 	; http://code.google.com/p/omaha/wiki/ServerProtocol
 	Local $need_x86, $appid, $ap, $data, $match
-	If $x86 Or $OSArch = "x86" Or $WinVersion < "6.0" Then
+	If $x86 Or $OSArch = "x86" Then
 		$need_x86 = True
 	EndIf
 	Switch $Channel
@@ -3653,6 +3896,18 @@ Func InetReadData($url, $bytes = 1024)
 	_WinHttpCloseHandle($hOpen)
 	Return $var
 EndFunc   ;==>InetReadData
+
+Func Pixel_Distance($x1, $y1, $x2, $y2) ;Pythagoras theorem for 2D
+	Local $a, $b, $c
+	If $x2 = $x1 And $y2 = $y1 Then
+		Return 0
+	Else
+		$a = $y2 - $y1
+		$b = $x2 - $x1
+		$c = Sqrt($a * $a + $b * $b)
+		Return $c
+	EndIf
+EndFunc   ;==>Pixel_Distance
 
 Func GetValidIP($aIPs, $Key = "GIP")
 	Local $WM_USER = 1024, $Timeout = 6000

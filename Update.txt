@@ -1,10 +1,10 @@
 ﻿
-latest=3.6
-url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.6.7z
-url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.6_x64.7z
-update=1. 解决近期Canary无法更新问题。\n2. 代理设为“跟随系统”时支持pac。\n3. 增加老板键功能：默认Alt+z或鼠标右键双击隐藏浏览器并静音（需Win Vista+）。
-update_zh-TW=1. 解決近期Canary無法更新問題。\n2. 代理設為“跟隨系統”時支援pac。\n3. 增加老板鍵功能：預設Alt+z或滑鼠右鍵雙按隱藏瀏覽器並靜音（需Win Vista+）。
-update_en-US=1. Resolved Canary update problem.\n2. Support PAC when proxy is set to "System proxy".\n3. Added boss key:press Alt+z or double click mouse's right button to hide Chrome.
+latest=3.6.2
+url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.6.2.7z
+url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.6.2_x64.7z
+update=1. 解决Win 10下64位浏览器更新问题。\n2. 解决启用鼠标热键功能时鼠标反应迟钝的问题，鼠标热键增加拖拽选项。
+update_zh-TW=1. 解決Win 10下64位元瀏覽器更新問題。\n2. 解決啟用滑鼠熱鍵功能時滑鼠反應遲鈍的問題，滑鼠熱鍵增加拖拽選項。
+update_en-US=1. Resolved the update problems of 64-bit Chrome in Win 10.\n2. Resolved the noticeable "lag" on mouse movement if mouse hotkey is enabled. Drag and drop can be set as hotkey now.
 
 inet_latest=3.2
 inet_url=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z

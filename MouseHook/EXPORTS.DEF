@@ -1,0 +1,9 @@
+EXPORTS
+    SetValuesMouse
+    MouseProc
+	IgnoreEvents
+	MouseEvents
+	BlockEvents
+
+SECTIONS
+	.shared READ WRITE SHARED

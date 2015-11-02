@@ -54,8 +54,6 @@ Global Const $sTagISimpleAudioVolume = _
 
 Global $__oIAudioSessionManager2
 
-;Audio_SetAppMute("chrome.exe", 1) ; Mute Chrome
-
 
 Func Audio_GetAppMute($pid)
 	If Not IsObj($__oIAudioSessionManager2) Then
