@@ -2272,18 +2272,39 @@ Func GUI_CheckChromeInSystem($Channel)
 		GUICtrlSetState($hCopyData, $GUI_DISABLE)
 	EndIf
 
-	; intalled as admin @ProgramFilesDir
-	$DefaultChromeDir = @ProgramFilesDir & "\" & $dir
-	If FileExists($DefaultChromeDir & "\chrome.exe") Then
-		$DefaultChromeVer = FindChromeVer($DefaultChromeDir)
-		If $DefaultChromeVer Then Return 1
+	; @ProgramFilesDir if intalled as admin
+	Local $ProgramFilesDir, $ProgramFilesDir32
+	If @OSArch = "X86" Then
+		$ProgramFilesDir32 = @ProgramFilesDir
+	Else
+		$ProgramFilesDir = RegRead("HKLM64\SOFTWARE\Microsoft\Windows\CurrentVersion", "ProgramFilesDir")
+		$ProgramFilesDir32 = RegRead("HKLM64\SOFTWARE\Microsoft\Windows\CurrentVersion", "ProgramFilesDir (x86)")
+	EndIf
+
+	If $ProgramFilesDir Then
+		$DefaultChromeDir = $ProgramFilesDir & "\" & $dir
+		If FileExists($DefaultChromeDir & "\chrome.exe") Then
+			$DefaultChromeVer = FindChromeVer($DefaultChromeDir)
+			If $DefaultChromeVer Then Return 1
+		EndIf
+	EndIf
+	If $ProgramFilesDir32 Then
+		$DefaultChromeDir = $ProgramFilesDir32 & "\" & $dir
+		If FileExists($DefaultChromeDir & "\chrome.exe") Then
+			$DefaultChromeVer = FindChromeVer($DefaultChromeDir)
+			If $DefaultChromeVer Then Return 1
+		EndIf
 	EndIf
 
 	; @LocalAppDataDir
 	$DefaultChromeDir = @LocalAppDataDir & "\" & $dir
 	If FileExists($DefaultChromeDir & "\chrome.exe") Then
 		$DefaultChromeVer = FindChromeVer($DefaultChromeDir)
-		If $DefaultChromeVer Then Return 1
+		If $DefaultChromeVer Then
+			Return 1
+		Else
+			$DefaultChromeDir = ""
+		EndIf
 	EndIf
 EndFunc   ;==>GUI_CheckChromeInSystem
 
