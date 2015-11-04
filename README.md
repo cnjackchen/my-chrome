@@ -21,10 +21,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 ## Latest Changes
- **Oct 11 2015 v3.6**
-  1. Resolved Canary update problem.
-  2. Support PAC when proxy is set to "System proxy".
-  3. Added boss key:press Alt+z or double click mouse's right button to hide Chrome.
+ **Nov 4 2015 v3.7**
+  1. Fixed the bug that fail to find local Chrome under 64-bit Windows.
+  2. Added: double click and/or right button click to close page tab, using mouse wheel to switch tabs.
+  3. Added: keep last page tab.
 
 [History(Chinese simplified)](https://github.com/cnjackchen/my-chrome/wiki/History)
 
