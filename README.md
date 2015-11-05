@@ -22,9 +22,9 @@ GNU General Public License for more details.
 
 ## Latest Changes
  **Nov 4 2015 v3.7**
-  1. Fixed the bug that fail to find local Chrome under 64-bit Windows.
-  2. Added: double click and/or right button click to close page tab, using mouse wheel to switch tabs.
-  3. Added: keep last page tab.
+  1. Fixed the bug: 64-bit MyChrome could not find local Chrome installation.
+  2. MyChrome can now double click and/or click right mouse button to close a page tab nad use mouse wheel to switch tabs.
+  3. Option added: keep last page tab.
 
 [History(Chinese simplified)](https://github.com/cnjackchen/my-chrome/wiki/History)
 
