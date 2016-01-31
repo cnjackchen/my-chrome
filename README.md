@@ -22,7 +22,7 @@ GNU General Public License for more details.
 
 ## Latest Changes
  **Jan 28 2016 v3.7.3**
-  Fixed update problems of Stable/Beta/Dev/Canary..
+ Fixed update problems of Stable/Beta/Dev/Canary..
 
 [History(Chinese simplified)](https://github.com/cnjackchen/my-chrome/wiki/History)
 
