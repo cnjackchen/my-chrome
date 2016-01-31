@@ -20,9 +20,9 @@ setup(
         #'dest_base': 'inet',
         'product_name': 'inet',
         'icon_resources': [(0, 'inet.ico'),],
-        'version': '3.2',
+        'version': '3.7.3',
         'description': 'MyChrome Internet Module',
-        'copyright': u'甲壳虫<jdchenjian@gmail.com>'
+        'copyright': u'JackChen<jdchenjian@gmail.com>'
     }],
     #data_files = [('images', [r'c:\path\to\image.jpg'])],
     options = {'py2exe': py2exe_options},

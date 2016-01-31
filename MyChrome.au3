@@ -4,7 +4,7 @@
 #AutoIt3Wrapper_Compile_Both=y
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Description=Google Chrome Portable
-#AutoIt3Wrapper_Res_Fileversion=3.7.0.0
+#AutoIt3Wrapper_Res_Fileversion=3.7.3.0
 #AutoIt3Wrapper_Res_LegalCopyright=甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -33,7 +33,7 @@
 #include "AppMute.au3"
 
 Global $WinVersion = _WinAPI_GetVersion()
-Global Const $AppVersion = "3.7" ; MyChrome version
+Global Const $AppVersion = "3.7.3" ; MyChrome version
 Global $AppName = StringRegExpReplace(@ScriptName, "\.[^.]*$", "")
 Global $inifile = @ScriptDir & "\" & $AppName & ".ini"
 Global $Language = IniRead($inifile, "Settings", "Language", "Auto")
@@ -363,11 +363,11 @@ If $CheckDefaultBrowser Then
 	CheckDefaultBrowser($ChromePath)
 EndIf
 
-WinWait("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]", "", 10) ; wait fo Chrome / Chromium window
+WinWait("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:\S+]", "", 10) ; wait fo Chrome / Chromium window
 For $i = 1 To 5
-	$hWnd_Browser = GethWndbyPID($AppPID_Browser, "Chrome", "Chrom")
+	$hWnd_Browser = GethWndbyPID($AppPID_Browser, "Chrome", "\S+")
 	If $hWnd_Browser Then ExitLoop
-	Sleep(2)
+	Sleep(2000)
 Next
 
 Global $AppUserModelId
@@ -432,7 +432,7 @@ While 1
 			ExitLoop
 		EndIf
 		$AppIsRunning = 1
-		$hWnd_Browser = GethWndbyPID($AppPID_Browser, "Chrome", "Chrom")
+		$hWnd_Browser = GethWndbyPID($AppPID_Browser, "Chrome", "\S+")
 	EndIf
 
 	If $TaskBarLastChange Then
@@ -496,21 +496,22 @@ Exit
 
 ; https://www.autoitscript.com/forum/topic/103362-monitoring-mouse-events/
 Func Mouse_Event($hGUI, $MsgID, $wParam, $lParam)
+	$x = BitAND($lParam, 0x0000FFFF) ;LoWord
+	$y = BitShift($lParam, 16) ;HiWord
+	$blocked = BitAND($MsgID, 0x00000001)
+	$event = BitAND($MsgID, 0xFFFFFFFE)
 	If WinGetProcess($wParam) <> $AppPID_Browser Then
+		If $blocked Then
+			PassMouseEvent($event)
+		EndIf
 		Return
 	EndIf
 
-	$x = BitAND($lParam, 0x0000FFFF) ;LoWord
-	$y = BitShift($lParam, 16) ;HiWord
 	$tPoint = DllStructCreate($tagPOINT)
 	$tPoint.X = $x
 	$tPoint.Y = $y
 	$hWnd = _WinAPI_WindowFromPoint($tPoint)
 	$class = _WinAPI_GetClassName($hWnd)
-
-	$blocked = BitAND($MsgID, 0x00000001)
-	$event = BitAND($MsgID, 0xFFFFFFFE)
-
 	If $event = $AU3_RCLICK And _IsPressed("10") Then ; Shift + right click
 		If $blocked Then
 			PassMouseEvent($event)
@@ -593,21 +594,24 @@ Func HookMouse()
 	EndIf
 
 	$hHookDll = DllOpen($hookdll)
+	If $hHookDll = -1 Then Return
+
+	OnAutoItExitRegister("UnhookMouse")
 	$hHookLib = _WinAPI_LoadLibrary($hookdll)
-	$iThread = _WinAPI_GetWindowThreadProcessId($hWnd_Browser, $iPID)
 	$mouseHOOKproc = _WinAPI_GetProcAddress($hHookLib, "MouseProc")
+	If Not $mouseHOOKproc Then Return
+	$iThread = _WinAPI_GetWindowThreadProcessId($hWnd_Browser, $iPID)
+	;If Not $iThread Then Return
 	$hMouseHook = _WinAPI_SetWindowsHookEx($WH_MOUSE, $mouseHOOKproc, $hHookLib, $iThread)
 
-	Local $mouse, $events, $blockevents
-
-	$events = "|" & $BosskeyM & "|" & $MouseClick2CloseTab
+	Local $events = "|" & $BosskeyM & "|" & $MouseClick2CloseTab
 	If $KeepLastTab Then
 		$events &= "|" & $AU3_MCLICK
 	EndIf
 	$events &= "|" & $Mouse2SwitchTab
 	;ConsoleWrite('Mouse events registered: ' & $events & @CRLF)
 
-	$blockevents = $AU3_RCLICK & "|" & $AU3_RDCLICK & "|" & $AU3_RDROP & "|" & $AU3_MCLICK
+	Local $blockevents = $AU3_RCLICK & "|" & $AU3_RDCLICK & "|" & $AU3_RDROP & "|" & $AU3_MCLICK
 
 	DllCall($hHookDll, "int", "SetValuesMouse", _
 			"hwnd", $__hwnd_vars, "hwnd", $hMouseHook)
@@ -647,8 +651,6 @@ Func HookMouse()
 	GUIRegisterMsg($AU3_WHEELUP + 1, "Mouse_Event")
 	GUIRegisterMsg($AU3_WHEELDOWN, "Mouse_Event")
 	GUIRegisterMsg($AU3_WHEELDOWN + 1, "Mouse_Event")
-
-	OnAutoItExitRegister("UnhookMouse")
 EndFunc   ;==>HookMouse
 Func UnhookMouse()
 	_WinAPI_UnhookWindowsHookEx($hMouseHook)
@@ -702,9 +704,11 @@ Func TabProcess($hWnd, $action = $AU3_RCLICK, $mouseX = 0, $mouseY = 0)
 	If $iTab > 1 Then ; more than one tab
 		;ConsoleWrite("There are " & $iTab & " tabs within Chrome window. " & @CRLF)
 		If $action = $AU3_LDCLICK Or $action = $AU3_RCLICK Then
-
 			DllCall($hHookDll, "int", "IgnoreEvents", "int", 1)
-			MouseClick("middle", $mouseX, $mouseY)
+			$pos = MouseGetPos()
+			MouseMove($mouseX, $mouseY, 0)
+			MouseClick("middle", $mouseX, $mouseY, 1, 0)
+			MouseMove($pos[0], $pos[1], 0)
 			Sleep(10)
 			DllCall($hHookDll, "int", "IgnoreEvents", "int", 0)
 			Return 1 ; block evnet
@@ -729,7 +733,10 @@ Func TabProcess($hWnd, $action = $AU3_RCLICK, $mouseX = 0, $mouseY = 0)
 		;ConsoleWrite("Close the old tab and return..." & @CRLF)
 
 		DllCall($hHookDll, "int", "IgnoreEvents", "int", 1)
-		MouseClick("middle", $mouseX, $mouseY)
+		$pos = MouseGetPos()
+		MouseMove($mouseX, $mouseY, 0)
+		MouseClick("middle", $mouseX, $mouseY, 1, 0)
+		MouseMove($pos[0], $pos[1], 0)
 		Sleep(10)
 		DllCall($hHookDll, "int", "IgnoreEvents", "int", 0)
 
@@ -749,7 +756,7 @@ Func Bosskey()
 	If $ChromeIsHidden Then
 		ResumeWindows()
 	Else
-		$aList = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]")
+		$aList = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:\S+]")
 		;_ArrayDisplay($aList)
 		If $aList[0][0] < 1 Then Return
 		For $i = 1 To $aList[0][0]
@@ -784,7 +791,7 @@ Func ResumeWindows()
 	EndIf
 
 	Local $aList, $pid
-	$aList = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]")
+	$aList = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:\S+]")
 	If $aList[0][0] < 1 Then Return
 	For $i = 1 To $aList[0][0]
 		If Not BitAND(WinGetState($aList[$i][1]), 2) Then ; hidden windows
@@ -1076,7 +1083,7 @@ Func CheckPinnedPrograms($browser_path)
 				If Not $AppUserModelId Then
 					If Not $hWnd_Browser Then
 						Sleep(3000)
-						$hWnd_Browser = GethWndbyPID($AppPID_Browser, "Chrome", "Chrom")
+						$hWnd_Browser = GethWndbyPID($AppPID_Browser, "Chrome", "\S+")
 					EndIf
 					$AppUserModelId = _WindowAppId($hWnd_Browser)
 					If Not $AppUserModelId Then
@@ -2606,7 +2613,7 @@ Func UpdateChrome($ChromePath, $Channel, $strUrl = "")
 		Return
 	EndIf
 
-	Local $updated, $urls
+	Local $updated, $urls, $iCancel
 	Local $LangDownloadingChrome = lang("Update", "DownloadingChrome", '下载 Chrome')
 	$IsUpdating = $LatestChromeUrls
 	$TempDir = $ChromeDir & "\~update"
@@ -2621,7 +2628,7 @@ Func UpdateChrome($ChromePath, $Channel, $strUrl = "")
 		TraySetClick(8)
 		TraySetToolTip("MyChrome")
 		TraySetOnEvent($TRAY_EVENT_PRIMARYDOWN, "TrayTipProgress")
-		Local $iCancel = TrayCreateItem(lang("Update", "CancelUpdate", '取消更新') & " ...")
+		$iCancel = TrayCreateItem(lang("Update", "CancelUpdate", '取消更新') & " ...")
 		TrayItemSetOnEvent(-1, "CancelUpdate")
 		TrayTip("MyChrome", StringFormat("%s ...\n%s", _
 				$LangDownloadingChrome, lang("Update", "DownloadChromeTips", '点击图标可查看下载进度')), 10, 1)
@@ -2913,12 +2920,14 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 
 	; http://code.google.com/p/omaha/wiki/ServerProtocol
 	Local $need_x86, $appid, $ap, $data, $match
+	;Local $cohort
 	If $x86 Or $OSArch = "x86" Then
 		$need_x86 = True
 	EndIf
 	Switch $Channel
 		Case "Stable"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D" ; protocol v3
+			;$cohort = "1:b8/1ei:"
 			If $need_x86 Then
 				$ap = "-multi-chrome"
 				$OSArch = "x86"
@@ -2927,6 +2936,7 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 			EndIf
 		Case "Beta"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
+			;$cohort = "1:8f:"
 			If $need_x86 Then
 				$ap = "1.1-beta"
 				$OSArch = "x86"
@@ -2935,6 +2945,7 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 			EndIf
 		Case "Dev"
 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
+			;$cohort = "1:0:"
 			If $need_x86 Then
 				$ap = "2.0-dev"
 				$OSArch = "x86"
@@ -2943,6 +2954,7 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 			EndIf
 		Case "Canary"
 			$appid = "4EA16AC7-FD5A-47C3-875B-DBF4A2008C20"
+			;$cohort = "11:jn:"
 			If $need_x86 Then
 				$ap = ""
 				$OSArch = "x86"
@@ -2951,9 +2963,17 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 			EndIf
 	EndSwitch
 
+	Local $a = MemGetStats()
+	Local $physmemory = Round($a[1]/1024/1024)
+
 	; omaha protocol v3
-	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.28.15" ismachine="0">' & _
-			'<hw physmemory="2" sse="1" sse2="1" sse3="1" ssse3="1" sse41="0" sse42="0" avx="0"/>' & _
+;~ 	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.29.1" ismachine="0">' & _
+;~ 			'<hw physmemory="' & $physmemory & '" sse="1" sse2="1" sse3="1" ssse3="1" sse41="0" sse42="0" avx="0"/>' & _
+;~ 			'<os platform="win" version="' & $WinVersion & '" sp="' & @OSServicePack & '" arch="' & $OSArch & '"/>' & _
+;~ 			'<app appid="{' & $appid & '}" version="" nextversion="" ap="' & $ap & '" cohort="' & $cohort & '"><updatecheck/></app></request>'
+
+	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.29.1" ismachine="0" installsource="update3web-ondemand" dedup="cr">' & _
+			'<hw physmemory="' & $physmemory & '" sse="1" sse2="1" sse3="1" ssse3="1" sse41="0" sse42="0" avx="0"/>' & _
 			'<os platform="win" version="' & $WinVersion & '" sp="' & @OSServicePack & '" arch="' & $OSArch & '"/>' & _
 			'<app appid="{' & $appid & '}" version="" nextversion="" ap="' & $ap & '"><updatecheck/></app></request>'
 
@@ -2961,10 +2981,10 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 		_SetVar("DLInfo", '|||||' & StringFormat($LangGetChromeChances, "Chrome", $i))
 		$hConnect = _WinHttpConnect($hHTTPOpen, "https://tools.google.com")
 		If $ProxyPort = 80 Then
-			$var = _WinHttpSimpleRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.28.15;winhttp;cup-ecdsa")
+			$var = _WinHttpSimpleRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.29.1;winhttp;cup-ecdsa")
 			$error = @error
 		Else
-			$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.28.15;winhttp;cup-ecdsa")
+			$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.29.1;winhttp;cup-ecdsa")
 			$error = @error
 		EndIf
 		_WinHttpCloseHandle($hConnect)
@@ -3608,7 +3628,7 @@ Func ChromeIsRunning($AppPath = "chrome.exe", $msg = "Do you want to close Chrom
 	$exe = StringRegExpReplace($AppPath, '.*\\', '')
 	For $j = 1 To 20
 		; close chrome
-		$list = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:(?i)Chrom]")
+		$list = WinList("[REGEXPCLASS:(?i)Chrome; REGEXPTITLE:\S+]")
 		For $i = 1 To $list[0][0]
 			$pid = WinGetProcess($list[$i][1])
 			If StringInStr(GetProcPath($pid), $AppPath) Then

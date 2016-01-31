@@ -1,12 +1,12 @@
 ﻿
-latest=3.7
-url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.7.7z
-url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.7_x64.7z
-update=1. 修正64位MyChrome找不到本地安装版Chrome的问题。\n2. 增加鼠标双击关闭标签页，右键关闭标签页功能（按住Shift键可恢复右键菜单）。\n3. 增加保留最后一个标签页、滚轮切换标签页功能。
-update_zh-TW=1. 修正64位元MyChrome找不到本地安裝版Chrome的問題。\n2. 增加滑鼠雙按關閉標簽頁，右鍵關閉標簽頁功能（按住Shift鍵可恢復右鍵菜單）。\n3. 增加保留最後一個標簽頁、滾輪切換標簽頁功能。
-update_en-US=1. Fixed the bug: 64-bit MyChrome could not find local Chrome installation.\n2. MyChrome can now double click and/or click right mouse button to close a page tab nad use mouse wheel to switch tabs.\n3. Option added: keep last page tab.
+latest=3.7.3
+url=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.7.3.7z
+url_x64=http://code.taobao.org/svn/mychrome/trunk/release/MyChrome_v3.7.3_x64.7z
+update=修正 Stable/Beta/Dev/Canary 分支的更新问题。
+update_zh-TW=修正 Stable/Beta/Dev/Canary 更新問題。
+update_en-US=Fixed update problems of Stable/Beta/Dev/Canary.
 
-inet_latest=3.2
-inet_url=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
-inet_url_x64=http://code.taobao.org/svn/mychrome/trunk/release/inet.7z
-inet_update=IP失效时尝试从第三方网站获取Google可用IP。
+inet_latest=3.7.3
+inet_url=http://code.taobao.org/svn/mychrome/trunk/release/inet_v3.7.3.7z
+inet_url_x64=http://code.taobao.org/svn/mychrome/trunk/release/inet_v3.7.3.7z
+inet_update=Changed some DNS。
