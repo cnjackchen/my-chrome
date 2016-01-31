@@ -21,10 +21,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 ## Latest Changes
- **Nov 4 2015 v3.7**
-  1. Fixed the bug: 64-bit MyChrome could not find local Chrome installation.
-  2. MyChrome can now double click and/or click right mouse button to close a page tab nad use mouse wheel to switch tabs.
-  3. Option added: keep last page tab.
+ **Jan 28 2016 v3.7.3**
+  Fixed update problems of Stable/Beta/Dev/Canary..
 
 [History(Chinese simplified)](https://github.com/cnjackchen/my-chrome/wiki/History)
 
