@@ -4,7 +4,7 @@
 #AutoIt3Wrapper_Compile_Both=y
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Description=Google Chrome Portable
-#AutoIt3Wrapper_Res_Fileversion=3.7.3.0
+#AutoIt3Wrapper_Res_Fileversion=3.8.0.0
 #AutoIt3Wrapper_Res_LegalCopyright=甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -29,18 +29,15 @@
 #include <InetConstants.au3>
 #include "WinHttp.au3" ; http://www.autoitscript.com/forum/topic/84133-winhttp-functions/
 #include "AppUserModelId.au3"
-#include "ASock.au3" ; https://www.autoitscript.com/forum/topic/45189-asynchronous-sockets-udf/#comment-336619
 #include "AppMute.au3"
 
 Global $WinVersion = _WinAPI_GetVersion()
-Global Const $AppVersion = "3.7.3" ; MyChrome version
+Global Const $AppVersion = "3.8" ; MyChrome version
 Global $AppName = StringRegExpReplace(@ScriptName, "\.[^.]*$", "")
 Global $inifile = @ScriptDir & "\" & $AppName & ".ini"
 Global $Language = IniRead($inifile, "Settings", "Language", "Auto")
 Global $LangFile = LangCheck()
 Global $ProxyType, $ProxySever, $ProxyPort
-Global $aGoodIP[0][2] ; google ip [ip][time]
-Global $hSockets[1][3] ; [ip][socket][TimerInit()]
 Global $UserAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 Chrome/46.0.2490.80 Safari/537.36"
 
 #include "SimpleMultiThreading.au3"
@@ -56,7 +53,6 @@ Global $FirstRun = 0, $ChromePath, $ChromeDir, $ChromeExe, $UserDataDir, $Params
 Global $CacheDir, $CacheSize, $PortableParam
 Global $ChromeSource = "Google", $get_latest_chrome_ver = "get_latest_chrome_ver"
 Global $LastCheckUpdate, $UpdateInterval, $Channel, $IsUpdating = 0, $x86 = 0
-Global $UseInetEx
 Global $AppUpdate, $AppUpdateLastCheck
 Global $RunInBackground, $ExApp, $ExAppAutoExit, $ExApp2, $AppPID_Browser, $ExAppPID
 Global $TaskBarDir = @AppDataDir & "\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar"
@@ -66,7 +62,6 @@ Global $dicKeys, $Bosskey, $BosskeyM, $Hide2Tray
 Global $KeepLastTab
 Global $MouseClick2CloseTab ; LDClick|RClick + MClick
 Global $Mouse2SwitchTab
-Global $maphost, $google_com
 Global $CancelAppUpdate
 
 Global $hSettings, $SettingsOK
@@ -74,7 +69,7 @@ Global $hSettingsOK, $hSettingsApply, $hStausbar
 Global $hChromePath, $hGetChromePath, $hChromeSource, $hCheckUpdate
 Global $hChannel, $hx86, $hUpdateInterval, $hLatestChromeVer, $hCurrentVer, $hUserDataDir, $hCopyData, $hUrlList
 Global $hAppUpdate, $hCacheDir, $hSelectCacheDir, $hCacheSize
-Global $hParams, $hDownloadThreads, $hProxyType, $hProxySever, $hProxyPort, $hMapHost, $hUseInetEx
+Global $hParams, $hDownloadThreads, $hProxyType, $hProxySever, $hProxyPort
 Global $hRunInBackground, $hLanguage, $hExApp, $hExAppAutoExit, $hExApp2
 Global $hBosskey, $hBosskeyM, $hBosskeyM1, $hBosskeyM2, $hWndProc, $hHide2Tray
 Global $hKeepLastTab, $hDoubleClick2CloseTab, $hRightClick2CloseTab, $hMouse2SwitchTab
@@ -146,15 +141,9 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "LastCheckUpdate", "2015/10/01 00:00:00")
 	IniWrite($inifile, "Settings", "UpdateInterval", 24)
 
-	If @OSLang = "0804" Then ; Maybe in China
-		IniWrite($inifile, "Settings", "ProxyType", "HTTP")
-		IniWrite($inifile, "Settings", "UpdateProxy", "google.com")
-		IniWrite($inifile, "Settings", "UpdatePort", 80)
-	Else
-		IniWrite($inifile, "Settings", "ProxyType", "SYSTEM")
-		IniWrite($inifile, "Settings", "UpdateProxy", "")
-		IniWrite($inifile, "Settings", "UpdatePort", "")
-	EndIf
+	IniWrite($inifile, "Settings", "ProxyType", "SYSTEM")
+	IniWrite($inifile, "Settings", "UpdateProxy", "")
+	IniWrite($inifile, "Settings", "UpdatePort", "")
 
 	IniWrite($inifile, "Settings", "DownloadThreads", 3)
 	IniWrite($inifile, "Settings", "Params", "")
@@ -171,16 +160,6 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "MouseClick2CloseTab", $AU3_LDCLICK)
 	IniWrite($inifile, "Settings", "Mouse2SwitchTab", $AU3_WHEELDOWN & "|" & $AU3_WHEELUP)
 	IniWrite($inifile, "Settings", "KeepLastTab", 0)
-
-	; IPLookup
-	IniWrite($inifile, "IPLookup", "google_com", "")
-	IniWrite($inifile, "IPLookup", "pid", 0)
-	IniWrite($inifile, "IPLookup", "exe", ".\inet.exe")
-	IniWrite($inifile, "IPLookup", "UseInetEx", 0)
-	IniWrite($inifile, "IPLookup", "LastRun", "2015/10/01 00:00:00")
-	IniWrite($inifile, "IPLookup", "maphost", 0)
-	IniWrite($inifile, "IPLookup", "GIP", "")
-	IniWrite($inifile, "IPLookup", "GIPSource", "")
 EndIf
 
 ; read ini info
@@ -198,7 +177,7 @@ Else
 EndIf
 $LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2015/10/01 00:00:00")
 $UpdateInterval = IniRead($inifile, "Settings", "UpdateInterval", 24) * 1
-$ProxyType = IniRead($inifile, "Settings", "ProxyType", "DIRECT")
+$ProxyType = IniRead($inifile, "Settings", "ProxyType", "SYSTEM")
 $ProxySever = IniRead($inifile, "Settings", "UpdateProxy", "")
 $ProxyPort = IniRead($inifile, "Settings", "UpdatePort", "")
 $DownloadThreads = IniRead($inifile, "Settings", "DownloadThreads", 3) * 1
@@ -216,29 +195,12 @@ $Hide2Tray = IniRead($inifile, "Settings", "Hide2Tray", 1) * 1
 $MouseClick2CloseTab = IniRead($inifile, "Settings", "MouseClick2CloseTab", $AU3_LDCLICK)
 $Mouse2SwitchTab = IniRead($inifile, "Settings", "Mouse2SwitchTab", $AU3_WHEELDOWN & "|" & $AU3_WHEELUP)
 $KeepLastTab = IniRead($inifile, "Settings", "KeepLastTab", 0) * 1
-$Inet = IniRead($inifile, "IPLookup", "exe", ".\inet.exe")
-$UseInetEx = IniRead($inifile, "IPLookup", "UseInetEx", "") * 1
-$IPLookupLastRun = IniRead($inifile, "IPLookup", "LastRun", "2015/10/01 00:00:00")
-$maphost = IniRead($inifile, "IPLookup", "maphost", 0) * 1
-$UseInetEx = (FileExists($Inet) And $UseInetEx <> 0) * 1
+
 
 #Region ========= Deal with old MyChrome =========
 If $AppVersion <> IniRead($inifile, "Settings", "AppVersion", "") Then
 	$FirstRun = 1
 	IniWrite($inifile, "Settings", "AppVersion", $AppVersion)
-
-	If $BosskeyM Then
-		If $BosskeyM = "MDClick" Then
-			$BosskeyM = $AU3_MDCLICK
-		ElseIf $BosskeyM = "MDrop" Then
-			$BosskeyM = $AU3_MDROP
-		ElseIf $BosskeyM = "RDClick" Then
-			$BosskeyM = $AU3_RDCLICK
-		Else
-			$BosskeyM = $AU3_RDROP
-		EndIf
-		IniWrite($inifile, "Settings", "BosskeyM", $BosskeyM)
-	EndIf
 EndIf
 #EndRegion ========= Deal with old MyChrome =========
 
@@ -282,38 +244,6 @@ If $CacheDir <> "" Then
 EndIf
 If $CacheSize <> 0 Then
 	$PortableParam &= ' --disk-cache-size=' & $CacheSize
-EndIf
-
-If $UseInetEx And $ProxyType = "HTTP" And $ProxySever = "google.com" And $maphost Then
-	$google_com = IniRead($inifile, "IPLookup", "google_com", "")
-	$arr = IniReadSection($inifile, "HostMap")
-	If @error Then
-		Local $arr[12][2] = [[11, ""], _
-				["*.google.com", "google_com"], _
-				["*.google.cn", "google_com"], _
-				["*.google.com.hk", "google_com"], _
-				["*.googleusercontent.com", ""], _
-				["*.google-analytics.com", ""], _
-				["*.googlevideo.com", ""], _
-				["*.googleapis.com", ""], _
-				["*.googlesource.com", ""], _
-				["*.ggpht.com", ""], _
-				["*.gstatic.com", ""], _
-				["*.doubleclick.net", ""]]
-		IniWriteSection($inifile, "HostMap", $arr)
-	Else
-		$arr[0][0] = "google_com"
-		$arr[0][1] = $google_com
-		$arr = ArrayHost2IP($arr)
-		$var = ""
-		For $i = 1 To UBound($arr) - 1 ; ignore google_com
-			If $arr[$i][1] <> "" Then
-				$var &= "," & $arr[$i][0] & " " & $arr[$i][1]
-			EndIf
-		Next
-		$var = StringTrimLeft($var, 1)
-		$PortableParam &= ' --host-resolver-rules="MAP ' & $var & '"'
-	EndIf
 EndIf
 
 Local $ChromeIsRunning = AppIsRunning($ChromePath)
@@ -769,7 +699,7 @@ Func Bosskey()
 			EndIf
 		Next
 
-		If VersionCompare($WinVersion, "6.0") >= 0 Then ; Windows Vista or later
+		If VersionCompare($WinVersion, "6.1") >= 0 Then ; Windows 7 or later
 			Audio_SetAppMute($AppPID_Browser, 1)
 		EndIf
 
@@ -803,7 +733,7 @@ Func ResumeWindows()
 	Next
 	$ChromeIsHidden = 0
 
-	If VersionCompare($WinVersion, "6.0") >= 0 Then
+	If VersionCompare($WinVersion, "6.1") >= 0 Then
 		Audio_SetAppMute($AppPID_Browser, 0)
 	EndIf
 EndFunc   ;==>ResumeWindows
@@ -899,6 +829,15 @@ Func GetIEProxy(ByRef $Sever, ByRef $Port)
 			$sProxy = DllStructGetData(DllStructCreate("wchar[" & _WinAPI_StringLenW($pProxy) & "]", $pProxy), 1)
 		EndIf
 
+		Local $match
+		If StringInStr($sProxy, "https=") Then
+			$match = StringRegExp($sProxy, '(?i)https=(\S+?:\d+)', 1)
+			If Not @error Then $sProxy = $match[0]
+		ElseIf StringInStr($sProxy, "http=") Then
+			$match = StringRegExp($sProxy, '(?i)http=(\S+?:\d+)', 1)
+			If Not @error Then $sProxy = $match[0]
+		EndIf
+
 		$pos = StringInStr($sProxy, ":")
 		If $pos Then
 			$Sever = StringLeft($sProxy, $pos - 1)
@@ -917,35 +856,6 @@ Func GethWndbyPID($pid, $class = ".*", $title = ".*")
 		EndIf
 	Next
 EndFunc   ;==>GethWndbyPID
-
-Func ArrayHost2IP($arr)
-	For $i = 0 To UBound($arr) - 1
-		If StringRegExp($arr[$i][1], "^[\d\.\|]+$") Then
-			If StringInStr($arr[$i][1], "|") Then
-				$a = StringSplit($arr[$i][1], "|", 2)
-				$arr[$i][1] = $a[0]
-			EndIf
-		Else
-			$arr[$i][1] = ArraySerachIP($arr, $arr[$i][1])
-		EndIf
-	Next
-	Return $arr
-EndFunc   ;==>ArrayHost2IP
-Func ArraySerachIP($arr, $host)
-	For $i = 0 To UBound($arr) - 1
-		If $arr[$i][0] = $host Then
-			If $arr[$i][1] = "" Then
-				Return ""
-			ElseIf StringRegExp($arr[$i][1], "^[\d\.\|]+$") Then
-				$a = StringSplit($arr[$i][1], "|", 2)
-				Return $a[0]
-			Else
-				Return ArraySerachIP($arr, $arr[$i][1])
-			EndIf
-		EndIf
-	Next
-	Return ""
-EndFunc   ;==>ArraySerachIP
 
 Func GetChromeLastChange($path)
 	; chrome "LastChange"  changed from digits as 312162 to commit hashes
@@ -993,32 +903,12 @@ Func CloseRegHandle()
 	EndIf
 EndFunc   ;==>CloseRegHandle
 
-Func RunIPlookup()
-	Local $pid = IniRead($inifile, "IPLookup", "pid", 0)
-	If Not ProcessExists(StringRegExpReplace($Inet, '.*\\', '')) Or Not ProcessExists($pid) Then
-		Local $pid = ShellExecute($Inet, '"' & $inifile & '"', @ScriptDir, "open", @SW_HIDE)
-		$IPLookupLastRun = _NowCalc()
-		IniWrite($inifile, "IPLookup", "LastRun", $IPLookupLastRun)
-		IniWrite($inifile, "IPLookup", "pid", $pid)
-	EndIf
-EndFunc   ;==>RunIPlookup
-
 Func UpdateCheck()
 	Local $updated, $var
 
-	If $UseInetEx And $ProxyType = "HTTP" And $ProxySever = "google.com" And _DateDiff("h", $IPLookupLastRun, _NowCalc()) >= 1 Then
-		If FileExists($Inet) Then
-			RunIPlookup()
-		EndIf
-	EndIf
-
 	; Check mychrome update
 	If $AppUpdate <> 0 And _DateDiff("h", $AppUpdateLastCheck, _NowCalc()) >= 24 Then
-		If $UseInetEx Then
-			CheckAppUpdate($Inet)
-		Else
-			CheckAppUpdate()
-		EndIf
+		CheckAppUpdate()
 	EndIf
 	; check chrome update
 	If $UpdateInterval >= 0 Then
@@ -1239,22 +1129,18 @@ EndFunc   ;==>FindChromeProgid
 
 
 ;~ check MyChrome update
-Func CheckAppUpdate($InetPath = "")
+Func CheckAppUpdate()
 	Local $UpdateInfo, $match, $LatestAppVer, $msg, $update, $url, $updated
 	Local $flag_url = "url", $flag_update = "update"
-	Local $flag_inet_url = "inet_url", $flag_inet_update = "inet_update"
 	If @AutoItX64 Then
 		$flag_url &= "_x64"
-		$flag_inet_url &= "_x64"
 	EndIf
 
 	If $LangFile Then
 		If StringInStr($LangFile, "zh-TW.ini") Then
 			$flag_update &= "_zh-TW"
-			$flag_inet_update &= "_zh-TW"
 		Else
 			$flag_update &= "_en-US"
-			$flag_inet_update &= "_en-US"
 		EndIf
 	EndIf
 
@@ -1263,7 +1149,7 @@ Func CheckAppUpdate($InetPath = "")
 
 	If $ProxyType = "SYSTEM" Then
 		HttpSetProxy(0)
-	ElseIf $ProxyType = "DIRECT" Or Not $ProxySever Or $ProxySever = "google.com" Then
+	ElseIf $ProxyType = "DIRECT" Or Not $ProxySever Then
 		HttpSetProxy(1)
 	Else
 		HttpSetProxy(2, $ProxySever & ":" & $ProxyPort)
@@ -1290,7 +1176,7 @@ Func CheckAppUpdate($InetPath = "")
 				$msg = MsgBox(68, 'MyChrome', StringFormat($LangUpdateTips, 'MyChrome', $AppVersion, $LatestAppVer, $update))
 			EndIf
 			If $msg = 6 Then
-				$updated = UpdateApp("MyChrome", @ScriptFullPath, $url)
+				$updated = UpdateApp(@ScriptFullPath, $url)
 				If $updated = 1 Then
 					MsgBox(64, "MyChrome", StringFormat($LangUpdated, 'MyChrome', $LatestAppVer))
 				ElseIf $updated = 0 Then
@@ -1302,41 +1188,11 @@ Func CheckAppUpdate($InetPath = "")
 			EndIf
 		EndIf
 	EndIf
-
-	If $InetPath Then
-		Local $InetVer = FileGetVersion($InetPath)
-		$match = StringRegExp($UpdateInfo, '(?ism)^\W*inet_latest=(\N+)$.*^\W*' & _
-				$flag_inet_url & '=(\N+)$.*^\W*' & _
-				$flag_inet_update & '=(\N*)$', 1)
-		If Not @error Then
-			$LatestAppVer = $match[0]
-			$url = $match[1]
-			$update = StringReplace($match[2], "\n", @CRLF)
-			If VersionCompare($LatestAppVer, $InetVer) > 0 Then
-				If $updated Or IsHWnd($hSettings) Then
-					$msg = 6
-				Else
-					$msg = MsgBox(68, 'MyChrome', StringFormat($LangUpdateTips, 'Inet', $InetVer, $LatestAppVer, $update))
-				EndIf
-				If $msg == 6 Then
-					$updated = UpdateApp("Inet", $InetPath, $url)
-					If $updated == 1 Then
-						MsgBox(64, "MyChrome", StringFormat($LangUpdated, 'Inet', $LatestAppVer))
-					ElseIf $updated == 0 Then
-						$msg = MsgBox(20, "MyChrome", StringFormat($LangUpdateFailed, 'Inet'))
-						If $msg = 6 Then ; Yes
-							OpenWebsite()
-						EndIf
-					EndIf
-				EndIf
-			EndIf
-		EndIf
-	EndIf
 	Return $updated
 EndFunc   ;==>CheckAppUpdate
-Func UpdateApp($App = "MyChrome", $exe = @ScriptFullPath, $url = "")
+Func UpdateApp($exe = @ScriptFullPath, $url = "")
 	Local $temp = @ScriptDir & "\MyChrome_temp"
-	Local $file = $temp & "\" & $App & ".7z"
+	Local $file = $temp & "\MyChrome.7z"
 	Local $iBytesSize, $updated = 0
 	If Not FileExists($temp) Then DirCreate($temp)
 	Local $hDownload = InetGet($url, $file, 19, 1)
@@ -1349,22 +1205,22 @@ Func UpdateApp($App = "MyChrome", $exe = @ScriptFullPath, $url = "")
 	TrayItemSetOnEvent(-1, "CancelAppUpdate")
 	$LangDownloading = lang("AppUpdate", "Downloading", '下载')
 	$LangDownloadTips = lang("AppUpdate", "DownloadTips", '点击图标可查看下载进度')
-	TrayTip("MyChrome", StringFormat("%s %s ...\n%s", $LangDownloading, $App, $LangDownloadTips), 10, 1)
+	TrayTip("MyChrome", StringFormat("%s %s ...\n%s", $LangDownloading, "MyChrome", $LangDownloadTips), 10, 1)
 	$CancelAppUpdate = False
 
 	Do
 		Sleep(250)
 		If $CancelAppUpdate Then
 			$updated = -1
-			_GUICtrlStatusBar_SetText($hStausbar, $App & " " & lang("AppUpdate", "UpdateCanceled", '更新已取消'))
+			_GUICtrlStatusBar_SetText($hStausbar, "MyChrome " & lang("AppUpdate", "UpdateCanceled", '更新已取消'))
 			ExitLoop
 		EndIf
 		$iBytesSize = InetGetInfo($hDownload, $INET_DOWNLOADREAD) / 1024
 		If IsHWnd($hSettings) Then
-			_GUICtrlStatusBar_SetText($hStausbar, StringFormat("%s %s ...  %.1fKB", $LangDownloading, $App, $iBytesSize))
+			_GUICtrlStatusBar_SetText($hStausbar, StringFormat("%s %s ...  %.1fKB", $LangDownloading, "MyChrome", $iBytesSize))
 		EndIf
-		If $TrayTipProgress Or TrayTipExists(StringFormat("%s %s", $LangDownloading, $App)) Then
-			TrayTip("MyChrome", StringFormat("%s %s ...  %.1fKB", $LangDownloading, $App, $iBytesSize), 10, 1)
+		If $TrayTipProgress Or TrayTipExists(StringFormat("%s %s", $LangDownloading, "MyChrome")) Then
+			TrayTip("MyChrome", StringFormat("%s %s ...  %.1fKB", $LangDownloading, "MyChrome", $iBytesSize), 10, 1)
 			$TrayTipProgress = 0
 		EndIf
 	Until InetGetInfo($hDownload, $INET_DOWNLOADCOMPLETE)
@@ -1373,11 +1229,11 @@ Func UpdateApp($App = "MyChrome", $exe = @ScriptFullPath, $url = "")
 	If Not $CancelAppUpdate Then
 		FileInstall("7zr.exe", $temp & "\7zr.exe", 1) ; http://www.7-zip.org/download.html
 		RunWait($temp & '\7zr.exe x "' & $file & '" -y', $temp, @SW_HIDE)
-		If FileExists($temp & "\" & $App & ".exe") Then
+		If FileExists($temp & "\MyChrome.exe") Then
 			If FileExists($exe) Then
 				FileMove($exe, $exe & ".bak", 9)
 			EndIf
-			FileMove($temp & "\" & $App & ".exe", $exe, 9)
+			FileMove($temp & "\MyChrome.exe", $exe, 9)
 			FileDelete($temp & "\7zr.exe")
 			FileDelete($file)
 			DirCopy($temp, @ScriptDir, 1)
@@ -1567,28 +1423,14 @@ Func Settings()
 	EndIf
 	GUICtrlSetData(-1, $LangProxyDirect & "|" & $LangProxyIE & "|HTTP", $sProxyType)
 
-	$hUseInetEx = GUICtrlCreateCheckbox(lang("GUI", "UseInetEx", '启用网络增强插件（inet.exe）'), 290, 350, -1, 20)
-	GUICtrlSetTip(-1, StringFormat(lang("GUI", "UseInetExTips", '用于查找Google可用IP'), 0))
-	GUICtrlSetOnEvent(-1, "GUI_EventUseInetEx")
-	If $UseInetEx Then
-		GUICtrlSetState($hUseInetEx, $GUI_CHECKED)
-	EndIf
 	GUICtrlCreateLabel(lang("GUI", "ProxyServer", '代理服务器：'), 20, 380, 130, 20)
 	$hProxySever = GUICtrlCreateCombo("", 150, 376, 120, 20)
-	GUICtrlSetData(-1, "google.com|127.0.0.1")
+	GUICtrlSetData(-1, "127.0.0.1")
 	_GUICtrlComboBox_SetEditText($hProxySever, $ProxySever)
-	GUICtrlSetOnEvent(-1, "GUI_SetProxyPort")
 	GUICtrlCreateLabel(lang("GUI", "ProxyPort", '代理端口：'), 290, 380, 80, 20)
 	$hProxyPort = GUICtrlCreateCombo("", 370, 376, 80, 20)
-	GUICtrlSetData(-1, "80|1080|8087")
+	GUICtrlSetData(-1, "1080|8787")
 	_GUICtrlComboBox_SetEditText($hProxyPort, $ProxyPort)
-	$hMapHost = GUICtrlCreateCheckbox(lang("GUI", "RestoreGoogle", '恢复浏览器部分Google服务（搜索、扩展、书签同步等）*'), 20, 406, -1, 20)
-	GUICtrlSetTip(-1, StringFormat(lang("GUI", "RestoreGoogleTips", _
-			'若无法正常访问google.com，可尝试此项功能。\n支持的域名见 %s.ini'), $AppName))
-	GUICtrlSetOnEvent(-1, "GUI_EventMapHost")
-	If $maphost And $UseInetEx Then
-		GUICtrlSetState($hMapHost, $GUI_CHECKED)
-	EndIf
 	GUI_SetProxy()
 
 	; More settings
@@ -1841,6 +1683,8 @@ Func GUI_LanguageEvent()
 		$langstr = "MyChrome will restart to apply new language!"
 	EndIf
 	MsgBox(64, "MyChrome", $langstr)
+	If $IsUpdating Then Return
+
 	GUIDelete($hSettings)
 	If @Compiled Then
 		ShellExecute(@ScriptName, "-Set", @ScriptDir)
@@ -1864,41 +1708,6 @@ Func GUI_SaveLang()
 	IniWrite($inifile, "Settings", "Language", $Language)
 EndFunc   ;==>GUI_SaveLang
 
-Func GUI_EventMapHost()
-	If GUICtrlRead($hMapHost) = $GUI_CHECKED And Not $UseInetEx Then
-		MsgBox(64, "MyChrome", lang("GUI", "NeedAddonTips", '该功能需要启用网络增强插件（inet.exe）！'), 0, $hSettings)
-		GUICtrlSetState($hMapHost, $GUI_UNCHECKED)
-	EndIf
-EndFunc   ;==>GUI_EventMapHost
-
-Func GUI_EventUseInetEx()
-	If GUICtrlRead($hUseInetEx) = $GUI_CHECKED Then
-		If Not FileExists($Inet) Then
-			Local $LangNoAddonTips = lang("GUI", "NoAddonTips", '找不到网络增强插件（inet.exe）！\n需要下载此插件吗？')
-			Local $msg = MsgBox(68, "MyChrome", StringFormat($LangNoAddonTips, 0), 0, $hSettings)
-			If $msg = 6 Then
-				CheckAppUpdate($Inet)
-				If FileExists($Inet) Then
-					_GUICtrlStatusBar_SetText($hStausbar, lang("GUI", "GetAddonSuccessful", '插件下载成功'))
-				Else
-					_GUICtrlStatusBar_SetText($hStausbar, lang("GUI", "GetAddonFailed", '插件下载失败'))
-				EndIf
-			EndIf
-			If Not FileExists($Inet) Then
-				GUICtrlSetState($hUseInetEx, $GUI_UNCHECKED)
-				Return
-			EndIf
-		EndIf
-		$UseInetEx = 1
-	Else
-		$UseInetEx = 0
-		If GUICtrlRead($hMapHost) = $GUI_CHECKED Then
-			GUICtrlSetState($hMapHost, $GUI_UNCHECKED)
-		EndIf
-	EndIf
-	GUI_SetProxy()
-EndFunc   ;==>GUI_EventUseInetEx
-
 Func GUI_SetProxy()
 	Local $LangProxyDirect = lang("GUI", "ProxyDirect", '直接连接')
 	Local $LangProxyIE = lang("GUI", "ProxyIE", '跟随系统')
@@ -1916,18 +1725,9 @@ Func GUI_SetProxy()
 		GUICtrlSetState($hProxyPort, $GUI_ENABLE)
 		$ProxySever = GUICtrlRead($hProxySever)
 		$ProxyPort = GUICtrlRead($hProxyPort)
-		If $ProxySever = "google.com" Then
-			GUICtrlSetState($hMapHost, $GUI_SHOW)
-			GUICtrlSetState($hUseInetEx, $GUI_SHOW)
-		Else
-			GUICtrlSetState($hMapHost, $GUI_HIDE)
-			GUICtrlSetState($hUseInetEx, $GUI_HIDE)
-		EndIf
 	Else ;If $ProxyType = "DIRECT" Or $ProxyType = "SYSTEM" Then
 		GUICtrlSetState($hProxySever, $GUI_DISABLE)
 		GUICtrlSetState($hProxyPort, $GUI_DISABLE)
-		GUICtrlSetState($hMapHost, $GUI_HIDE)
-		GUICtrlSetState($hUseInetEx, $GUI_HIDE)
 		If $ProxyType = "SYSTEM" Then
 			GetIEProxy($ProxySever, $ProxyPort)
 			_GUICtrlComboBox_SetEditText($hProxySever, $ProxySever)
@@ -1935,13 +1735,6 @@ Func GUI_SetProxy()
 		EndIf
 	EndIf
 EndFunc   ;==>GUI_SetProxy
-
-Func GUI_SetProxyPort()
-	If GUICtrlRead($hProxySever) = "google.com" Then
-		_GUICtrlComboBox_SetEditText($hProxyPort, 80)
-	EndIf
-	GUI_SetProxy()
-EndFunc   ;==>GUI_SetProxyPort
 
 Func GUI_Eventx86()
 	If GUICtrlRead($hx86) = $GUI_CHECKED Then
@@ -2112,11 +1905,6 @@ Func GUI_SettingsApply()
 
 	GUI_SetProxy()
 	GUI_SaveLang()
-	If GUICtrlRead($hMapHost) = $GUI_CHECKED Then
-		$maphost = 1
-	Else
-		$maphost = 0
-	EndIf
 	$DownloadThreads = GUICtrlRead($hDownloadThreads)
 	IniWrite($inifile, "Settings", "UserDataDir", $UserDataDir)
 	IniWrite($inifile, "Settings", "Params", $Params)
@@ -2132,8 +1920,6 @@ Func GUI_SettingsApply()
 	IniWrite($inifile, "Settings", "UpdateProxy", $ProxySever)
 	IniWrite($inifile, "Settings", "UpdatePort", $ProxyPort)
 	IniWrite($inifile, "Settings", "DownloadThreads", $DownloadThreads)
-	IniWrite($inifile, "IPLookup", "maphost", $maphost)
-	IniWrite($inifile, "IPLookup", "UseInetEx", $UseInetEx)
 	$var = $ExApp
 	If StringRegExp($var, '^".*"$') Then $var = '"' & $var & '"'
 	IniWrite($inifile, "Settings", "ExApp", $var)
@@ -2741,9 +2527,7 @@ Func get_latest_chrome_ver_sina($Channel, $x86 = 0, $inifile = "", $Proxy = "")
 		$arr = StringSplit($Proxy, ":", 2)
 		$ProxySever = $arr[1]
 		$ProxyPort = $arr[2]
-		If $ProxySever <> "google.com" Then
-			$sProxy = $ProxySever & ":" & $ProxyPort
-		EndIf
+		$sProxy = $ProxySever & ":" & $ProxyPort
 	EndIf
 
 	#cs
@@ -2754,7 +2538,7 @@ Func get_latest_chrome_ver_sina($Channel, $x86 = 0, $inifile = "", $Proxy = "")
 		DEV: down_id=5 / dwon_id=6
 	#ce
 	Local $down_id, $need_x86
-	If $x86 Or $OSArch = "x86" Or VersionCompare($WinVersion, "6.0") < 0 Then
+	If $x86 Or $OSArch = "x86" Or VersionCompare($WinVersion, "6.1") < 0 Then
 		$need_x86 = True
 	EndIf
 	Switch $Channel
@@ -2846,16 +2630,6 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 		$ProxySever = $arr[1]
 		$ProxyPort = $arr[2]
 		$sProxy = $ProxySever & ":" & $ProxyPort
-		If $ProxySever = "google.com" Then
-			$http = "http"
-			_SetVar("DLInfo", "|||||" & lang("Update", "SearchingIP", '查找 Google 可用 IP') & ' ...')
-			$IP = GetGoogleIP($inifile)
-			If Not $IP Then
-				_SetVar("DLInfo", "||1||1|" & lang("Update", "NoIPFound", '找不到 Google 可用 IP'))
-				Return
-			EndIf
-		EndIf
-		$sProxy = StringReplace($sProxy, $ProxySever, $IP)
 	EndIf
 
 	Local $hHTTPOpen, $hConnect, $name, $a, $hRequest, $sHeader, $error
@@ -2889,13 +2663,8 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 		For $i = 1 To 3
 			_SetVar("DLInfo", '|||||' & StringFormat($LangGetChromeChances, "Chromium", $i))
 			$hConnect = _WinHttpConnect($hHTTPOpen, $host)
-			If $ProxyPort = 80 Then
-				$var = _WinHttpSimpleRequest($hConnect, "GET", $urlbase & "/LAST_CHANGE")
-				$error = @error
-			Else
-				$var = _WinHttpSimpleSSLRequest($hConnect, "GET", $urlbase & "/LAST_CHANGE")
-				$error = @error
-			EndIf
+			$var = _WinHttpSimpleSSLRequest($hConnect, "GET", $urlbase & "/LAST_CHANGE")
+			$error = @error
 			_WinHttpCloseHandle($hConnect)
 			If $error Then
 				$error = $LangNoServerResp
@@ -2967,11 +2736,6 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 	Local $physmemory = Round($a[1]/1024/1024)
 
 	; omaha protocol v3
-;~ 	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.29.1" ismachine="0">' & _
-;~ 			'<hw physmemory="' & $physmemory & '" sse="1" sse2="1" sse3="1" ssse3="1" sse41="0" sse42="0" avx="0"/>' & _
-;~ 			'<os platform="win" version="' & $WinVersion & '" sp="' & @OSServicePack & '" arch="' & $OSArch & '"/>' & _
-;~ 			'<app appid="{' & $appid & '}" version="" nextversion="" ap="' & $ap & '" cohort="' & $cohort & '"><updatecheck/></app></request>'
-
 	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.29.1" ismachine="0" installsource="update3web-ondemand" dedup="cr">' & _
 			'<hw physmemory="' & $physmemory & '" sse="1" sse2="1" sse3="1" ssse3="1" sse41="0" sse42="0" avx="0"/>' & _
 			'<os platform="win" version="' & $WinVersion & '" sp="' & @OSServicePack & '" arch="' & $OSArch & '"/>' & _
@@ -2980,14 +2744,10 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 	For $i = 1 To 3
 		_SetVar("DLInfo", '|||||' & StringFormat($LangGetChromeChances, "Chrome", $i))
 		$hConnect = _WinHttpConnect($hHTTPOpen, "https://tools.google.com")
-		If $ProxyPort = 80 Then
-			$var = _WinHttpSimpleRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.29.1;winhttp;cup-ecdsa")
-			$error = @error
-		Else
-			$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.29.1;winhttp;cup-ecdsa")
-			$error = @error
-		EndIf
+		$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.29.1;winhttp;cup-ecdsa")
+		$error = @error
 		_WinHttpCloseHandle($hConnect)
+
 		If $error Then
 			$error = $LangNoServerResp
 		Else
@@ -3057,7 +2817,7 @@ Func download_chrome($urls, $localfile, $DownloadThreads = 3, $inifile = "MyChro
 		$ProxyPort = $arr[2]
 	EndIf
 	Local $hHTTPOpen, $ret, $error
-	If $ProxySever = "google.com" Or $ProxySever = "" Or $ProxyPort = "" Then ; try direct download first if google.com set as proxy
+	If $ProxySever = "" Or $ProxyPort = "" Then ; try direct download first if google.com set as proxy
 		$hHTTPOpen = _WinHttpOpen($UserAgent)
 	Else
 		$hHTTPOpen = _WinHttpOpen($UserAgent, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $ProxySever & ":" & $ProxyPort, "localhost")
@@ -3074,7 +2834,7 @@ Func download_chrome($urls, $localfile, $DownloadThreads = 3, $inifile = "MyChro
 			_SetVar("DLInfo", "|||||" & lang("Update", "Connecting", '尝试连接') & " " & $aUrl[$i])
 			$a = HttpParseUrl($aUrl[$i])
 			$hConnect = _WinHttpConnect($hHTTPOpen, $a[0], $a[2])
-			If $a[2] = 443 And $ProxySever <> "google.com" Then
+			If $a[2] = 443 Then
 				$hRequest = _WinHttpOpenRequest($hConnect, "GET", $a[1], Default, Default, Default, _
 						BitOR($WINHTTP_FLAG_SECURE, $WINHTTP_FLAG_ESCAPE_DISABLE))
 			Else
@@ -3090,11 +2850,6 @@ Func download_chrome($urls, $localfile, $DownloadThreads = 3, $inifile = "MyChro
 				ExitLoop 2
 			EndIf
 		Next
-		If $ProxySever = "google.com" And $ChromeSource = "Google" Then
-			_WinHttpCloseHandle($hHTTPOpen)
-			_SetVar("DLInfo", "|||||" & lang("Update", "SearchingIP", '查找 Google 可用 IP') & ' ...')
-			$hHTTPOpen = _WinHttpOpen($UserAgent, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, GetGoogleIP($inifile) & ":" & $ProxyPort, "localhost")
-		EndIf
 	Next
 
 	If Not $url Then
@@ -3844,100 +3599,6 @@ Func VersionCompare($v1, $v2)
 	Return $ret
 EndFunc   ;==>VersionCompare
 
-Func GetGoogleIP($ini = "")
-	Local $IP, $aIP
-	If Not $ini Then
-		$ini = StringLeft(@ScriptFullPath, StringInStr(@ScriptFullPath, ".", 0, -1) - 1) & ".ini"
-	EndIf
-	$GIP = IniRead($ini, "IPLookup", "google_com", "")
-	If $GIP <> "" Then
-		$aIP = StringSplit($GIP, "|", 2)
-		$IP = GetValidIP($aIP, "google_com")
-		If $IP Then Return $IP
-	EndIf
-
-	$GIP = IniRead($ini, "IPLookup", "GIP", "")
-	If $GIP <> "" Then
-		$aIP = StringSplit($GIP, "|", 2)
-		$IP = GetValidIP($aIP, "GIP")
-		If $IP Then Return $IP
-	EndIf
-
-	$GIPSource = IniRead($ini, "IPLookup", "GIPSource", "")
-	$gs = $GIPSource
-	$ss = "1234"
-	If $gs = "" Then $gs = 1
-	While 1
-		Switch $gs
-			Case 1 ; https://raw.githubusercontent.com/XX-net/XX-Net/master/gae_proxy/local/good_ip.txt
-				$var = InetReadData("https://raw.githubusercontent.com/XX-net/XX-Net/master/gae_proxy/local/good_ip.txt", 1024 * 4)
-				$match = StringRegExp($var, '(?im)^(\d+\.\d+\.\d+\.\d+) +.*\.google', 3)
-				If Not @error Then
-					$IP = GetValidIP($match, "GIP")
-				EndIf
-			Case 2 ; https://coding.net/u/levi/p/imouto-host/git/raw/master/lofter/hosts
-				$var = InetReadData("https://coding.net/u/levi/p/imouto-host/git/raw/master/lofter/hosts", 1024)
-				$match = StringRegExp($var, '(?im)^(\d+\.\d+\.\d+\.\d+) +.*\.google', 3)
-				If Not @error Then
-					$match = _ArrayUnique($match, 0, 0, 0, 0)
-					$IP = GetValidIP($match, "GIP")
-				EndIf
-			Case 3 ; http://www.go2121.com/google/splus.php?query=*
-				$var = InetReadData("http://go2121.com/google/splus.php?query=*", 1024)
-				$match = StringRegExp($var, '(?is)var +hs\s*=\s*\[\s*([\d\." ,]+)\s*\]', 1)
-				If Not @error Then
-					$match = StringRegExp($match[0], '"(\d+\.\d+\.\d+\.\d+)"', 3)
-					If Not @error Then
-						$IP = GetValidIP($match, "GIP")
-					EndIf
-				EndIf
-			Case 4 ; http://anotherhome.net/easygoagent/proxy.ini
-				$var = InetReadData("http://anotherhome.net/easygoagent/proxy.ini", 4 * 1024)
-				$match = StringRegExp($var, '(?i)google_hk\s*=\s*([\d\.\|]+)', 1) ; google_hk = 216.58.220.71|216.58.220.27|64.233.189.197
-				If Not @error Then
-					$IP = GetValidIP(StringSplit($match[0], "|", 2), "GIP")
-				EndIf
-		EndSwitch
-		If $IP Then ExitLoop
-		$ss = StringReplace($ss, $gs, "")
-		$gs = StringLeft($ss, 1)
-		If $gs = "" Then ExitLoop
-	WEnd
-;~ 	If Not $IP Then
-;~ 		$IP = TCPNameToIP("google.cn")
-;~ 	EndIf
-	If $gs <> $GIPSource Then
-		IniWrite($ini, "IPLookup", "GIPSource", $gs)
-	EndIf
-	Return $IP
-EndFunc   ;==>GetGoogleIP
-Func InetReadData($url, $bytes = 1024)
-	$aUrl = HttpParseUrl($url)
-	If @error Then Return ""
-
-	If $ProxyType = "SYSTEM" Then
-		GetIEProxy($ProxySever, $ProxyPort)
-	EndIf
-	If $ProxyType = "DIRECT" Or $ProxySever = "" Or $ProxySever = "google.com" Then
-		$hOpen = _WinHttpOpen($UserAgent)
-	Else
-		$hOpen = _WinHttpOpen($UserAgent, $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $ProxySever & ":" & $ProxyPort, "localhost")
-	EndIf
-	_WinHttpSetTimeouts($hOpen, 0, 5000, 5000, 5000)
-	$hConnect = _WinHttpConnect($hOpen, $aUrl[0], $aUrl[2])
-	If $aUrl[2] = 443 Then
-		$hRequest = _WinHttpSimpleSendSSLRequest($hConnect, "GET", $aUrl[1])
-	Else
-		$hRequest = _WinHttpSimpleSendRequest($hConnect, "GET", $aUrl[1])
-	EndIf
-	_WinHttpReceiveResponse($hRequest)
-	$var = _WinHttpReadData($hRequest, 1, $bytes)
-	_WinHttpCloseHandle($hRequest)
-	_WinHttpCloseHandle($hConnect)
-	_WinHttpCloseHandle($hOpen)
-	Return $var
-EndFunc   ;==>InetReadData
-
 Func Pixel_Distance($x1, $y1, $x2, $y2) ;Pythagoras theorem for 2D
 	Local $a, $b, $c
 	If $x2 = $x1 And $y2 = $y1 Then
@@ -3949,110 +3610,3 @@ Func Pixel_Distance($x1, $y1, $x2, $y2) ;Pythagoras theorem for 2D
 		Return $c
 	EndIf
 EndFunc   ;==>Pixel_Distance
-
-Func GetValidIP($aIPs, $Key = "GIP")
-	Local $WM_USER = 1024, $Timeout = 6000
-	Dim $aGoodIP[0][2]
-	Local $N_SOCKETS = 20 ; max sockets number
-	If $N_SOCKETS > UBound($aIPs) Then $N_SOCKETS = UBound($aIPs)
-	Dim $hSockets[$N_SOCKETS][3]
-	$hNotifyGUI = GUICreate("Dummy Notify Window / " & TimerInit())
-	TCPStartup()
-	While 1
-		$nFreeSock = 0
-		For $i = 0 To $N_SOCKETS - 1
-			If $hSockets[$i][1] = "" Or $hSockets[$i][1] = -1 Then
-				If UBound($aIPs) = 0 Then
-					$nFreeSock += 1
-				Else
-					$hSockets[$i][0] = $aIPs[0]
-					_ArrayDelete($aIPs, 0)
-					$hSockets[$i][1] = _ASocket()
-					$hSockets[$i][2] = TimerInit()
-					If @error Then ExitLoop 2
-					_ASockSelect($hSockets[$i][1], $hNotifyGUI, $WM_USER + $i, BitOR($FD_READ, $FD_WRITE, $FD_CONNECT, $FD_CLOSE))
-					GUIRegisterMsg($WM_USER + $i, "OnSocketEvent")
-					_ASockConnect($hSockets[$i][1], $hSockets[$i][0], 80)
-				EndIf
-			Else
-				If TimerDiff($hSockets[$i][2]) > $Timeout Then
-					CloseSocket($i)
-				EndIf
-			EndIf
-		Next
-
-		Sleep(500)
-		;ConsoleWrite("======= Working socks " & $N_SOCKETS - $nFreeSock & " =======" & @CRLF)
-		If $nFreeSock = $N_SOCKETS Then
-			ExitLoop
-		EndIf
-	WEnd
-
-	For $i = 0 To $N_SOCKETS - 1
-		CloseSocket($i)
-		;GUIRegisterMsg($WM_USER + $i, "") ; <-- not sure if this is necessary
-	Next
-	TCPShutdown()
-	GUIDelete($hNotifyGUI)
-
-	_ArraySort($aGoodIP, 0, 0, 0, 1)
-	Local $NewIPs
-	If UBound($aGoodIP) Then
-		For $i = 0 To UBound($aGoodIP) - 1
-			$NewIPs &= $aGoodIP[$i][0] & "|"
-		Next
-		$NewIPs = StringTrimRight($NewIPs, 1)
-	EndIf
-	Local $ips = IniRead($inifile, "IPLooup", $Key, "")
-	If $ips <> $NewIPs Then
-		IniWrite($inifile, "IPLookup", $Key, $NewIPs)
-	EndIf
-	Local $IP = UBound($aGoodIP) ? $aGoodIP[0][0] : ""
-	Return $IP
-EndFunc   ;==>GetValidIP
-Func OnSocketEvent($hWnd, $iMsgID, $wParam, $lParam)
-	Local $WM_USER = 1024
-	Local $hSocket = $wParam
-	Local $nSocket = $iMsgID - $WM_USER
-	Local $iError = _HiWord($lParam)
-	Local $iEvent = _LoWord($lParam)
-	If $nSocket < 0 Or $nSocket >= UBound($hSockets) Then
-		Return 'GUI_RUNDEFMSG'
-	EndIf
-
-	Switch $iEvent
-		Case $FD_READ; Data has arrived!
-			$var = TCPRecv($hSocket, 1024)
-			If Not @error Then
-				;ConsoleWrite($var & @CRLF)
-				If StringRegExp($var, '(?is)HTTP/\d+\.\d+ +[123]\d\d +.*Server: *g[vw]s', 0) Then
-					_ArrayAdd($aGoodIP, $hSockets[$nSocket][0] & "|" & StringFormat("%04d", TimerDiff($hSockets[$nSocket][2])))
-					;ConsoleWrite("+> " & "Good IP: " & $hSockets[$nSocket][0] & @CRLF)
-				EndIf
-			EndIf
-			CloseSocket($nSocket)
-		Case $FD_WRITE
-			If $iError <> 0 Then
-				CloseSocket($nSocket)
-			EndIf
-		Case $FD_CLOSE; Bye bye
-			CloseSocket($nSocket)
-		Case $FD_CONNECT
-			If $iError <> 0 Then
-				CloseSocket($nSocket)
-			Else
-				TCPSend($hSockets[$nSocket][1], _
-						"GET / HTTP/1.1" & @CRLF & _
-						"Host: " & $hSockets[$nSocket][0] & @CRLF & _
-						"Connection: close" & @CRLF & @CRLF)
-			EndIf
-	EndSwitch
-	Return 'GUI_RUNDEFMSG'
-EndFunc   ;==>OnSocketEvent
-Func CloseSocket($nSocket)
-	_ASockShutdown($hSockets[$nSocket][1])
-	Sleep(10)
-	TCPCloseSocket($hSockets[$nSocket][1])
-	$hSockets[$nSocket][0] = ""
-	$hSockets[$nSocket][1] = -1
-EndFunc   ;==>CloseSocket

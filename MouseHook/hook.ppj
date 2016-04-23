@@ -17,11 +17,11 @@ RC = porc.exe#
 LINK = polink.exe#
 SIGN = posign.exe#
 CCFLAGS = -std:C99 -Tx86-coff -Ot -Ob1 -fp:precise -W1 -Gr -Ze#
-ASFLAGS = -AIA32 -Gd -c -nologo -coff -W1 -Cu#
-RCFLAGS = -r#
-LINKFLAGS = -machine:x86 -subsystem:windows kernel32.lib user32.lib gdi32.lib comctl32.lib comdlg32.lib advapi32.lib delayimp.lib -dll#
+ASFLAGS = -AIA32 -Gr -c -nologo -coff -W1 -Cu#
+RCFLAGS = #
+LINKFLAGS = -subsystem:windows -machine:x86 -dll kernel32.lib user32.lib gdi32.lib comctl32.lib comdlg32.lib advapi32.lib delayimp.lib#
 WizCreator = Pelle Orinius#
-SIGNFLAGS = -location:CU -store:MY -timeurl:http://timestamp.verisign.com/scripts/timstamp.dll -errkill#
+SIGNFLAGS = -timeurl:http://timestamp.verisign.com/scripts/timstamp.dll -location:CU -store:MY -errkill#
 INCLUDE = $(PellesCDir)\Include\Win;$(PellesCDir)\Include#
 LIB = $(PellesCDir)\Lib\Win;$(PellesCDir)\Lib#
 
