@@ -1,8 +1,6 @@
 ﻿#NoTrayIcon
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=Icon_1.ico
-#AutoIt3Wrapper_Compile_Both=y
-#AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Description=Google Chrome Portable
 #AutoIt3Wrapper_Res_Fileversion=3.8.0.0
 #AutoIt3Wrapper_Res_LegalCopyright=甲壳虫<jdchenjian@gmail.com>
@@ -38,7 +36,7 @@ Global $inifile = @ScriptDir & "\" & $AppName & ".ini"
 Global $Language = IniRead($inifile, "Settings", "Language", "Auto")
 Global $LangFile = LangCheck()
 Global $ProxyType, $ProxySever, $ProxyPort
-Global $UserAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 Chrome/46.0.2490.80 Safari/537.36"
+Global $UserAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 Chrome/56.0.2924.87 Safari/537.36"
 
 #include "SimpleMultiThreading.au3"
 #include "IAccessible.au3"
@@ -138,7 +136,7 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "Channel", "Stable")
 	IniWrite($inifile, "Settings", "x86", 0)
 	IniWrite($inifile, "Settings", "ChromeSource", "Google")
-	IniWrite($inifile, "Settings", "LastCheckUpdate", "2015/10/01 00:00:00")
+	IniWrite($inifile, "Settings", "LastCheckUpdate", "2016/05/01 00:00:00")
 	IniWrite($inifile, "Settings", "UpdateInterval", 24)
 
 	IniWrite($inifile, "Settings", "ProxyType", "SYSTEM")
@@ -149,7 +147,7 @@ If Not FileExists($inifile) Then
 	IniWrite($inifile, "Settings", "Params", "")
 	IniWrite($inifile, "Settings", "RunInBackground", 1)
 	IniWrite($inifile, "Settings", "AppUpdate", 1)
-	IniWrite($inifile, "Settings", "AppUpdateLastCheck", "2015/10/01 00:00:00")
+	IniWrite($inifile, "Settings", "AppUpdateLastCheck", "2016/05/01 00:00:00")
 	IniWrite($inifile, "Settings", "CheckDefaultBrowser", 1)
 	IniWrite($inifile, "Settings", "ExApp", "")
 	IniWrite($inifile, "Settings", "ExAppAutoExit", 1)
@@ -175,7 +173,7 @@ If $ChromeSource = "sina.com.cn" Then
 Else
 	$get_latest_chrome_ver = "get_latest_chrome_ver"
 EndIf
-$LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2015/10/01 00:00:00")
+$LastCheckUpdate = IniRead($inifile, "Settings", "LastCheckUpdate", "2016/05/01 00:00:00")
 $UpdateInterval = IniRead($inifile, "Settings", "UpdateInterval", 24) * 1
 $ProxyType = IniRead($inifile, "Settings", "ProxyType", "SYSTEM")
 $ProxySever = IniRead($inifile, "Settings", "UpdateProxy", "")
@@ -184,7 +182,7 @@ $DownloadThreads = IniRead($inifile, "Settings", "DownloadThreads", 3) * 1
 $Params = IniRead($inifile, "Settings", "Params", "")
 $RunInBackground = IniRead($inifile, "Settings", "RunInBackground", 1) * 1
 $AppUpdate = IniRead($inifile, "Settings", "AppUpdate", 1) * 1
-$AppUpdateLastCheck = IniRead($inifile, "Settings", "AppUpdateLastCheck", "2015/10/01 00:00:00")
+$AppUpdateLastCheck = IniRead($inifile, "Settings", "AppUpdateLastCheck", "2016/05/01 00:00:00")
 $CheckDefaultBrowser = IniRead($inifile, "Settings", "CheckDefaultBrowser", 1) * 1
 $ExApp = IniRead($inifile, "Settings", "ExApp", "")
 $ExAppAutoExit = IniRead($inifile, "Settings", "ExAppAutoExit", 1) * 1
@@ -2689,23 +2687,18 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 
 	; http://code.google.com/p/omaha/wiki/ServerProtocol
 	Local $need_x86, $appid, $ap, $data, $match
-	;Local $cohort
 	If $x86 Or $OSArch = "x86" Then
 		$need_x86 = True
 	EndIf
 	Switch $Channel
 		Case "Stable"
-			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D" ; protocol v3
-			;$cohort = "1:b8/1ei:"
+;~ 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D" ; protocol v3
+			$appid = "8A69D345-D564-463C-AFF1-A69D9E530F96"
 			If $need_x86 Then
-				$ap = "-multi-chrome"
 				$OSArch = "x86"
-			Else
-				$ap = "x64-stable-multi-chrome"
 			EndIf
 		Case "Beta"
-			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
-			;$cohort = "1:8f:"
+			$appid = "8A69D345-D564-463C-AFF1-A69D9E530F96"
 			If $need_x86 Then
 				$ap = "1.1-beta"
 				$OSArch = "x86"
@@ -2713,19 +2706,16 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 				$ap = "x64-beta-multi-chrome"
 			EndIf
 		Case "Dev"
-			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D"
-			;$cohort = "1:0:"
+			$appid = "8A69D345-D564-463C-AFF1-A69D9E530F96"
 			If $need_x86 Then
 				$ap = "2.0-dev"
 				$OSArch = "x86"
 			Else
-				$ap = "x64-dev-multi-chrome"
+				$ap = "x64-dev-statsdef_1"
 			EndIf
 		Case "Canary"
 			$appid = "4EA16AC7-FD5A-47C3-875B-DBF4A2008C20"
-			;$cohort = "11:jn:"
 			If $need_x86 Then
-				$ap = ""
 				$OSArch = "x86"
 			Else
 				$ap = "x64-canary"
@@ -2736,15 +2726,20 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 	Local $physmemory = Round($a[1]/1024/1024)
 
 	; omaha protocol v3
-	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.29.1" ismachine="0" installsource="update3web-ondemand" dedup="cr">' & _
+	;<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.32.7" shell_version="1.3.32.7" ismachine="1" installsource="update3web-ondemand" dedup="cr">
+	;<hw physmemory="4" sse="1" sse2="1" sse3="1" ssse3="1" sse41="0" sse42="0" avx="0"/>
+	;<os platform="win" version="10.0.14393.693" sp="" arch="x64"/>
+	;<app appid="{8A69D345-D564-463C-AFF1-A69D9E530F96}" version="" nextversion="" ap="x64-dev-statsdef_1"><updatecheck/></app></request>
+
+	$data = '<?xml version="1.0" encoding="UTF-8"?><request protocol="3.0" version="1.3.32.7" ismachine="0" installsource="update3web-ondemand" dedup="cr">' & _
 			'<hw physmemory="' & $physmemory & '" sse="1" sse2="1" sse3="1" ssse3="1" sse41="0" sse42="0" avx="0"/>' & _
 			'<os platform="win" version="' & $WinVersion & '" sp="' & @OSServicePack & '" arch="' & $OSArch & '"/>' & _
-			'<app appid="{' & $appid & '}" version="" nextversion="" ap="' & $ap & '"><updatecheck/></app></request>'
+			'<app appid="{' & $appid & '}" version="" nextversion="" ap="' & $ap & '" lang="zh-CN"><updatecheck/></app></request>'
 
 	For $i = 1 To 3
 		_SetVar("DLInfo", '|||||' & StringFormat($LangGetChromeChances, "Chrome", $i))
 		$hConnect = _WinHttpConnect($hHTTPOpen, "https://tools.google.com")
-		$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.29.1;winhttp;cup-ecdsa")
+		$var = _WinHttpSimpleSSLRequest($hConnect, "POST", "service/update2", Default, $data, "User-Agent: Google Update/1.3.32.7;winhttp;cup-ecdsa")
 		$error = @error
 		_WinHttpCloseHandle($hConnect)
 
