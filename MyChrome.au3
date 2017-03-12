@@ -1,8 +1,10 @@
 ﻿#NoTrayIcon
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=Icon_1.ico
+#AutoIt3Wrapper_Compile_Both=y
+#AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Description=Google Chrome Portable
-#AutoIt3Wrapper_Res_Fileversion=3.8.0.0
+#AutoIt3Wrapper_Res_Fileversion=3.8.1.0
 #AutoIt3Wrapper_Res_LegalCopyright=甲壳虫<jdchenjian@gmail.com>
 #AutoIt3Wrapper_Res_Language=1033
 #AutoIt3Wrapper_AU3Check_Parameters=-q
@@ -30,7 +32,7 @@
 #include "AppMute.au3"
 
 Global $WinVersion = _WinAPI_GetVersion()
-Global Const $AppVersion = "3.8" ; MyChrome version
+Global Const $AppVersion = "3.8.1" ; MyChrome version
 Global $AppName = StringRegExpReplace(@ScriptName, "\.[^.]*$", "")
 Global $inifile = @ScriptDir & "\" & $AppName & ".ini"
 Global $Language = IniRead($inifile, "Settings", "Language", "Auto")
@@ -1305,7 +1307,7 @@ Func Settings()
 
 	GUICtrlCreateLabel(lang("GUI", "Channel", '分支：'), 20, 174, 80, 20)
 	$hChannel = GUICtrlCreateCombo("", 130, 170, 130, 20, $CBS_DROPDOWNLIST)
-	GUICtrlSetData(-1, "Stable|Beta|Dev|Canary|Chromium-Continuous|Chromium-Snapshots", $Channel)
+	GUICtrlSetData(-1, "Stable|Beta|Dev|Canary|Chromium", $Channel)
 	GUICtrlSetOnEvent(-1, "GUI_CheckChrome")
 
 	$hx86 = GUICtrlCreateCheckbox(lang("GUI", "Only32Bit", '只下载 32 位浏览器（x86）'), 20, 200, -1, 20)
@@ -2644,19 +2646,9 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 	$LangUpdateGot = lang("Update", "UpdateGot", '已成功获取 %s 更新信息')
 
 	; get latest Chromium developer build
-	; https://storage.googleapis.com/chromium-browser-continuous/index.html?path=Win/
-	; https://storage.googleapis.com/chromium-browser-continuous/index.html?path=Win_x64/
 	If StringInStr($Channel, "Chromium") Then
 		$host = $http & "://storage.googleapis.com"
-		If $Channel = "Chromium-Continuous" Then
-			If $x86 Or $OSArch = "x86" Then
-				$urlbase = "chromium-browser-continuous/Win"
-			Else
-				$urlbase = "chromium-browser-continuous/Win_x64"
-			EndIf
-		Else
-			$urlbase = "chromium-browser-snapshots/Win"
-		EndIf
+		$urlbase = "chromium-browser-snapshots/Win"
 
 		For $i = 1 To 3
 			_SetVar("DLInfo", '|||||' & StringFormat($LangGetChromeChances, "Chromium", $i))
@@ -2692,10 +2684,12 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 	EndIf
 	Switch $Channel
 		Case "Stable"
-;~ 			$appid = "4DC8B4CA-1BDA-483E-B5FA-D3C12E15B62D" ; protocol v3
 			$appid = "8A69D345-D564-463C-AFF1-A69D9E530F96"
 			If $need_x86 Then
+				$ap = ""
 				$OSArch = "x86"
+			Else
+				$ap = "x64-stable-multi-chrome"
 			EndIf
 		Case "Beta"
 			$appid = "8A69D345-D564-463C-AFF1-A69D9E530F96"
@@ -2716,6 +2710,7 @@ Func get_latest_chrome_ver($Channel, $x86 = 0, $inifile = "MyChrome.ini", $Proxy
 		Case "Canary"
 			$appid = "4EA16AC7-FD5A-47C3-875B-DBF4A2008C20"
 			If $need_x86 Then
+				$ap = ""
 				$OSArch = "x86"
 			Else
 				$ap = "x64-canary"
