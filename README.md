@@ -21,8 +21,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 ## Latest Changes
- **Jan 28 2016 v3.7.3**
- Fixed update problems of Stable/Beta/Dev/Canary..
+ **Mar 12 2017 v3.8.1**
 
 [History(Chinese simplified)](https://github.com/cnjackchen/my-chrome/wiki/History)
 
