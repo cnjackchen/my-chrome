@@ -28,6 +28,8 @@ GNU General Public License for more details.
 
 ## 下载
 https://github.com/cnjackchen/my-chrome/tree/master/release
+32位系统只能用32位的MyChrome/Chrome。
+64位系统可用任意选择使用32/64位的MyChrome/Chrome。
 
 ## 多语言
 简体中文，繁体中文，英语。
