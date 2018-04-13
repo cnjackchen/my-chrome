@@ -1,10 +1,10 @@
 ## Introduction
 
-MyChrome is a Google Chrome portable loader with features of:
- 1. Change the path of Google Chrome binaries, user data and cache folder.
- 2. Your Chrome portable can be set as default browser.
- 3. Your Chrome portable can be updated automatically, all channels including Stable/Beta/Dev/Canary/Chromium are supported.
- 4. Run external apps on Chrome startup or on Chrome exit.
+MyChrome 是Google Chrome的便携版引导器，
+自定义Chrome浏览器程序文件、数据文件夹、缓存文件夹的位置等。
+制作Chrome便携版，可设为默认浏览器。
+便携版浏览器可自动更新，支持Stable / Beta / Dev / Canary / Chromium，可设置代{过}{滤}理服务器，支持多线程下载。
+支持浏览器启动/退出时运行外部程序。
 
 ![https://github.com/cnjackchen/my-chrome/blob/master/MyChrome_v3.7.gif](https://github.com/cnjackchen/my-chrome/blob/master/MyChrome_v3.7.gif)
 
@@ -20,28 +20,29 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-## Latest Changes
- **Mar 12 2017 v3.8.1**
+## 最近更新
+ **2017.03.12 v3.8.1**
+修正 Stable/Beta/Dev/Canary 分支的更新问题
 
-[History(Chinese simplified)](https://github.com/cnjackchen/my-chrome/wiki/History)
+[更新历史](https://github.com/cnjackchen/my-chrome/wiki/History)
 
-## Download MyChrome Binaries
+## 下载
 https://github.com/cnjackchen/my-chrome/tree/master/release
 
-## Multi-language
-Chinese simplified, Chinese traditional and English.
+## 多语言
+简体中文，繁体中文，英语。
 
-If you want to translate MyChrome to other languages, follow steps below:
- 1. Select English or Chinese traditional first.
- 2. Find the language file `en-US.ini` or `zh-TW.ini` in the `lang` subfolder, rename it to `lang.ini`.
- 3. Translate `lang.ini` to your language.
+如果您要翻译其他语言:
+ 1. 选择英语或繁体中文。
+ 2. 在'lang'文件夹中找到语言文件 `en-US.ini`或 `zh-TW.ini`。
+ 3. 翻译`lang.ini`。
 
-## Guide
- 1. Download and un-zip `MyChrome_vXX.7z` to any folder.
- 2. Run `MyChrome.exe` to show settings GUI, change settings if necessary.
- 3. Press `OK`... Done!
- 4. Double click `MyChrome.vbs` to show settings window if you want to change settings in the future.
+## 使用说明
+ 1. 下载并解压`MyChrome_vXX.7z`到任意位置。
+ 2. 运行 `MyChrome.exe` 显示设置界面，如有必要修改设置。
+ 3. 点击 `确定`... 就这么简单!
+ 4. 以后如果要调用设置界面，双击`MyChrome.vbs`。
 
-## Issues
- 1. Go to [Issues](https://github.com/cnjackchen/my-chrome/issues)
+## 问题反馈
+ 1. [Issues](https://github.com/cnjackchen/my-chrome/issues)
  2. [卡饭论坛的帖子](http://bbs.kafan.cn/thread-1725205-1-1.html)
