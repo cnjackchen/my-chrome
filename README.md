@@ -1,10 +1,10 @@
-## Introduction
+## 简介
 
 MyChrome 是Google Chrome的便携版引导器，
-自定义Chrome浏览器程序文件、数据文件夹、缓存文件夹的位置等。
-制作Chrome便携版，可设为默认浏览器。
-便携版浏览器可自动更新，支持Stable / Beta / Dev / Canary / Chromium，可设置代{过}{滤}理服务器，支持多线程下载。
-支持浏览器启动/退出时运行外部程序。
+1. 自定义Chrome浏览器程序文件、数据文件夹、缓存文件夹的位置等。
+2. 制作Chrome便携版，可设为默认浏览器。
+3. 便携版浏览器可自动更新，支持Stable / Beta / Dev / Canary / Chromium，可设置代{过}{滤}理服务器，支持多线程下载。
+4. 支持浏览器启动/退出时运行外部程序。
 
 ![https://github.com/cnjackchen/my-chrome/blob/master/MyChrome_v3.7.gif](https://github.com/cnjackchen/my-chrome/blob/master/MyChrome_v3.7.gif)
 
@@ -34,7 +34,7 @@ https://github.com/cnjackchen/my-chrome/tree/master/release
 
 如果您要翻译其他语言:
  1. 选择英语或繁体中文。
- 2. 在'lang'文件夹中找到语言文件 `en-US.ini`或 `zh-TW.ini`。
+ 2. 在`lang`文件夹中找到语言文件 `en-US.ini`或 `zh-TW.ini`。
  3. 翻译`lang.ini`。
 
 ## 使用说明
