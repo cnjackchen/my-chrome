@@ -1000,9 +1000,9 @@ EndFunc   ;==>CheckPinnedPrograms
 
 Func CreateSettingsShortcut($fname)
 	Local $var = FileRead($fname)
-	If $var <> 'CreateObject("shell.application").ShellExecute "' & @ScriptName & '", "-set"' Then
+	If $var <> 'CreateObject("shell.application").ShellExecute ".\' & @ScriptName & '", "-set"' Then
 		FileDelete($fname)
-		FileWrite($fname, 'CreateObject("shell.application").ShellExecute "' & @ScriptName & '", "-set"')
+		FileWrite($fname, 'CreateObject("shell.application").ShellExecute ".\' & @ScriptName & '", "-set"')
 	EndIf
 EndFunc   ;==>CreateSettingsShortcut
 
